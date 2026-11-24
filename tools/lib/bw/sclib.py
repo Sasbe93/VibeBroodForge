@@ -733,7 +733,15 @@ class Map:
          ('PUPx',pupx),('PTEx',ptex),('UNIx',unix),('UPGx',b'\1'*61+b'\0'*(794-61)),('TECx',b'\1'*44+b'\0'*(396-44))]
         assert len(pupx)==2318 and len(ptex)==1672
         chk=b''.join(k.encode()+struct.pack('<I',len(v))+v for k,v in sec)
-        tmp=path+'.chk'; open(tmp,'wb').write(chk)
+        _prov=None
+        try:   # hidden provenance record: CHK section VMFP + MPQ file vibeforge\\provenance.json (docs/provenance.md)
+            _lib=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..')
+            if _lib not in sys.path: sys.path.insert(0,_lib)
+            import vmf_provenance
+            _w={a:open(f,'rb').read() for a,f in s.wavfiles.items()}
+            _chk2,_prov=vmf_provenance.hook_bw(path,chk,_w)
+        except Exception as _e: print('WARNING provenance record not written: %r'%(_e,)); _chk2=chk
+        tmp=path+'.chk'; open(tmp,'wb').write(_chk2)
         try:   # computer_ai_started / ai_workers_mining: warn at build time, predelivery check 48 FAILs
             import sys as _sys; _here=os.path.dirname(os.path.abspath(__file__))
             for _p in (_here, os.path.join(_here,'..','..','bw')):
@@ -746,7 +754,10 @@ class Map:
         m=mpqapi.MPQ.create(path,3,64+len(s.wavfiles)*2)
         m.add_file('staredit\\scenario.chk',tmp)
         for arch,f in s.wavfiles.items(): m.add_file(arch,f)
+        if _prov:
+            open(tmp+'.prov','wb').write(_prov); m.add_file('vibeforge\\provenance.json',tmp+'.prov')
         m.compact(); del m; os.remove(tmp)
+        if _prov: os.remove(tmp+'.prov')
         return chk
 
 def validate(path):
