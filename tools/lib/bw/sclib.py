@@ -783,7 +783,7 @@ def validate(path):
     for w in wavs:
         data=bytes(m.extract_file(strs[w-1])); assert data[:4]==b'RIFF', strs[w-1]
     del m   # release the map before LoadMap opens it (an open handle locks it on Windows: error 32)
-    r=subprocess.run([sys.executable,'-c',f"import eudplib as ep; ep.LoadMap({path!r}); print('LOADMAP_OK')"],capture_output=True,text=True,errors='replace',cwd=tempfile.gettempdir())
+    r=subprocess.run([sys.executable,'-c',f"import eudplib as ep; ep.LoadMap({os.path.abspath(path)!r}); print('LOADMAP_OK')"],capture_output=True,text=True,errors='replace',cwd=tempfile.gettempdir())
     assert 'LOADMAP_OK' in r.stdout, r.stdout+r.stderr
     return dict(trigs=len(s['TRIG'])//2400,brief=len(s['MBRF'])//2400,units=len(s['UNIT'])//36,strings=c,wavs=len(wavs),size=os.path.getsize(path))
 
