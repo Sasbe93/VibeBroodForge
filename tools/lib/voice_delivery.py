@@ -2,7 +2,7 @@
 """voice_delivery - VO markup v1: delivery notes for voiced campaign dialogue (StarCraft: Brood War).
 
 Every voiced line carries a DELIVERY SCRIPT: the spoken words plus notes on emotion, stress, pauses and tempo.
-The notes stay in the sources, in war3map.j (as `// VO:` comments) and in the Voice_Script*.md next to the map, so an agent
+The notes stay in the mission sources (the `script=` argument of `Map.voice`) and in the Voice_Script*.md next to the map, so an agent
 with a better (emotional) TTS can re-voice the lines later. The free pipeline (edge-tts + ffmpeg) applies what it can:
 pauses as real silence between segments, per-segment tempo/pitch/volume, emotion presets, and a local stress boost.
 
