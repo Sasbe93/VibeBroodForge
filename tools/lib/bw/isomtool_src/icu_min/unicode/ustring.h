@@ -1,4 +1,4 @@
-/* Minimal stand-in for ICU's unicode/ustring.h (see utypes.h). Part of VibeModForge (MIT). */
+/* Minimal stand-in for ICU's unicode/ustring.h (see utypes.h). Part of VibeBroodForge (MIT). */
 #pragma once
 #include "utypes.h"
 #ifdef __cplusplus

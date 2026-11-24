@@ -4,66 +4,68 @@ The checks find known mistakes. They do **not** make a map good, and a map with 
 says what "delivery quality" means here, how much of it a tool can measure, and what an agent has to judge itself.
 
 ## Where the quality of the reference missions came from
-The reference Warcraft III chapters built with this repository were not produced by one prompt and a template. Each
-one has a mission-specific build script of roughly 1,100 to 4,300 lines (terrain shaping, scene dressing, AI plan,
-cinematics, voice lines), was iterated over many playtest rounds, and every round of feedback became a rule in the
-guides and a check. The library code is in this repository (`tools/lib/wc3/`, `tools/wc3/mission/`), the per-mission
-build scripts are not. The WC3 example (`tools/wc3/mission/example_mission.py`) is a **pipeline skeleton**: it shows
-how the builder is called and fails many mission checks on purpose (no intro shots, one cliff level, stock names, no
-design review). Copying it and stopping there produces exactly the "simple and flat" maps a playtester rejects.
+The reference Brood War missions built with this repository were not produced by one prompt and an example. Each one
+has a mission-specific build script on `tools/lib/bw/sclib.py` and `missionkit.py` (terrain, start setup, enemy
+towns and AI, waves, briefing, voiced transmissions, rewards), was iterated over playtest rounds, and every round of
+feedback became a rule in the guides and a check. The library code is in this repository, the per-mission build
+scripts are not. The example missions (`docs/bw-example-missions.md`) show the **structure** of a mission and pass
+every check, but they are deliberately small: they sit below the measured band in five to eight rows and carry a
+`QUALITY_BAND_OK:` line that only the examples may use. Copying an example and stopping there produces exactly the
+thin map a playtester rejects.
 
-So: plan the mission first (outline, design note, paths, duration, abilities, scenes), then write a build script of
-your own that is as rich as the plan, then run the gate. Expect many build-check-fix rounds.
+So: plan the mission first (outline, design note, paths, duration, shortcuts, pressure, tech level), then write a
+build script of your own that is as rich as the plan, then run the gate. Expect many build-check-fix rounds.
 
-## Measured reference band (WC3 missions)
-`python3 tools/wc3/quality_metrics.py MAP.w3x` measures the rows below; `tools/deliver.py` refuses a mission with 5
-or more rows below the band unless the design note explains why (`QUALITY_BAND_OK: <reason>`, for example a small
-interior map or a deliberate hero-only chapter). Below the band is a prompt to look again, not proof of bad quality.
+## Measured reference band
+`python3 tools/bw/quality_metrics.py MAP.scx` measures the rows below; `tools/deliver.py` refuses a mission with 4
+or more rows below the band unless the design note explains why (`QUALITY_BAND_OK: <reason>`, for example a short
+no-base hero mission on a small map). Below the band is a prompt to look again, not proof of bad quality. A
+`QUALITY_BAND_OK:` line copied from an example is refused.
 
-Band measured on three reference chapters (Lordaeron Fall and Lordaeron Winter tilesets, 96x96 to 120x120 playable):
+Band measured on three delivered campaign missions built with this repository (Badlands and Desert, 128x128):
+M6 Sluice Gates, M7 The Poisoned Well, BK6 The Hollow Crowns. Minimum = what the references reach (BK6 is the one
+reference below a row: it has almost no doodads); typical = the median of the three (doodad types: the mean of M6 and M7).
 
-| Row | What it says | Minimum | Typical | Weak agent map (for contrast) |
-|---|---|---|---|---|
-| ground_tiles_used | ground textures that cover at least 0.2% of the map | 5 | 6 | 5 |
-| doodads_per_1k_cells | trees and props per 1,000 playable cells | 330 | 430 | 297 |
-| distinct_doodad_types | different doodad and tree types | 30 | 43 | 24 |
-| props_per_1k_cells | non-tree props (scenes, ruins, camps, rocks) | 100 | 123 | 83 |
-| cliff_levels | distinct cliff layers in use | 3 | 5 | 3 |
-| ramp_groups | separate ramps between layers | 5 | 7 | 3 |
-| script_lines | lines in `war3map.j` (scenes, waves, quests, AI glue) | 2400 | 2950 | 2064 |
-| voiced_lines | sound handles, one per voiced line | 25 | 42 | 7 |
-| quests | quests in the log (main, side, defeat conditions) | 3 | 4 | 1 |
-| timed_attack_triggers | timers and periodic events driving waves and events | 8 | 12 | 12 |
+| Row | What it says | Minimum | Typical | M6 | M7 | BK6 | Weak agent maps (for contrast) |
+|---|---|---|---|---|---|---|---|
+| ground_types_used | flat terrain types that cover at least 0.5% of the map | 5 | 6 | 6 | 6 | 6 | 4, 4 |
+| distinct_doodad_types | different doodads (tile doodads and placed sprites) | 30 | 44 | 36 | 51 | 4 | 34, 36 |
+| ramp_groups | walkable places where the ground level changes (ramps) | 3 | 8 | 3 | 8 | 10 | 2, 2 |
+| triggers | triggers in the mission | 80 | 91 | 91 | 81 | 180 | 49, 22 |
+| trigger_actions | trigger actions (story, waves, objectives, AI glue) | 700 | 747 | 711 | 747 | 2377 | 443, 319 |
+| transmissions | voiced in-mission lines (Transmission actions) | 20 | 25 | 25 | 23 | 31 | 13, 10 |
+| briefing_voice_lines | voiced briefing lines (Play WAV / Transmission in the briefing) | 5 | 6 | 6 | 6 | 6 | 3, 4 |
+| spawn_actions | Create Unit actions (waves, reinforcements, rewards) | 100 | 160 | 123 | 160 | 803 | 40, 10 |
+| order_actions | Order actions (attack waves, escorts, retreats) | 80 | 106 | 86 | 106 | 557 | 30, 8 |
 
-The "weak agent map" column is a map another agent built from this repository without the workflow below; it was
-judged "so-so" in map and mission design by the playtester. A cave map (Northrend interior, few ramps by design)
-measured 4 rows below, which is why the refusal starts at 5.
+Information only (printed, not part of the band): doodad tiles per 1,000 tiles, placed doodad sprites, elevation
+levels, walkable share, objective updates, AI script runs, pre-placed units, computer players, map size.
 
-Brood War has no metric tool yet; the BW predelivery check already measures doodad purpose, mineral shapes, cliff
-blending, start setup variety and objective paths. Compare a new BW map with the example missions
-(`docs/bw-example-missions.md`) by eye: minimap and routes PNG side by side.
+The "weak agent maps" are two missions another agent built from this repository without the workflow below; the
+playtester judged them too easy and "so-so" in map and mission design. They are 8 rows below the band; the
+references are 0, 0 and 1 rows below, which is why the refusal starts at 4. The example missions are 5 to 8 rows
+below (small on purpose, see above).
 
 ## What the agent must judge (no tool can)
-Before running the gate, look at the minimap/preview PNG and the routes PNG and answer these in the design note's
-`## Design Review` (WC3) or flow section (BW). Be honest; "fine" is not an answer.
-- **Looks:** Does the terrain read as a place (river valley, burnt farmland, cliff fortress) or as stripes and blobs?
-  Are there long straight cliff or water bands with one gap? Is every quarter of the map dressed with a scene that
-  belongs to the story, or are there empty fields?
-- **Paths:** For every objective, what does the player meet on the way, and what can they do to skip it?
+Before running the gate, look at the minimap PNG and the routes PNG and answer these in the design note's flow
+section. Be honest; "fine" is not an answer.
+- **Looks:** Does the terrain read as a place or as stripes and blobs? Are there long straight cliff, lava or water
+  bands with one gap? Are doodads placed with a purpose, or is the map bare between the bases?
+- **Paths:** For every objective, what does the player meet on the way, and what can they do to skip it (lift-off,
+  flyers, drops, recall)?
 - **Pressure:** Where does pressure come from, and does it survive the first enemy base the player can reach?
 - **Pacing:** What happens in minutes 0-3, 3-10, 10+? Where is the first real decision?
-- **Abilities:** Which situation in this mission needs each player ability?
 - **Difference:** What makes this mission unlike the previous one and unlike the example it was built from?
 
 ## What is still not enforced
 - Visual beauty and "feel": metrics catch thin maps, not ugly ones.
-- Fun and fairness in real play: trigger tests and AI observation maps get closer, a human playtest is the proof.
+- Fun and fairness in real play: trigger simulation and the ScmDraft open test get closer, a human playtest is the
+  proof.
 - Story quality and voice acting beyond the structural checks.
 State these limits when you deliver.
 
 ## Known gaps in the repository itself
-- The WC3 mission example (`tools/wc3/mission/example_mission.py`) fails 28 of about 150 mission checks; it is a
-  pipeline skeleton, not a reference. A full WC3 reference mission that passes the gate is still missing (the BW
-  examples in `docs/bw-example-missions.md` do pass theirs).
-- The WC3 ranked example (`tools/ranked/wc3/example_2p.py`) fails the ranked check (about 100 findings); use
-  `docs/wc3-ranked-maps.md` and the ranked rules, not the example's look.
+- The example missions pass every check but sit below the band (they are small on purpose). A full reference
+  mission at band level is not in the repository; its build script is mission-specific.
+- The band rests on three missions on two tilesets; re-measure it when more missions at that level exist (keep
+  `tools/bw/quality_metrics.py` and this page in sync).

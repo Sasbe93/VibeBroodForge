@@ -144,5 +144,5 @@ m.T([P1], [m.cond(1, qty=0, cmp=10, flags=0)],
 m.T([P1], [m.cond(2, player=P1, qty=0, unit=CC, cmp=10)], [m.text('\x06The Command Center has fallen. The fleet has nowhere to dock.'), m.wait(2000), m.act(2, flags=0x04)])
 
 import trigsim
-exlib.finish(m, SLUG, NAME, 'EXAMPLE: Last Light', 'Example mission (VibeModForge): hold the station until the fleet arrives.',
+exlib.finish(m, SLUG, NAME, 'EXAMPLE: Last Light', 'Example mission (VibeBroodForge): hold the station until the fleet arrives.',
              [trigsim.at(TIMER + 5, 'the countdown ends', lambda *a: None)])

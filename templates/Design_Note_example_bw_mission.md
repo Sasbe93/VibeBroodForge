@@ -61,6 +61,7 @@ map without pressure while an objective is still open.
 
 ## Tech level
 TECH_LEVEL: early :: chapter 2 of 3 (example campaign) :: Barracks tier only (Marine, Firebat, Medic, Bunker, Missile Turret, Academy with Stim Packs and Comsat), weapon and armor upgrades to level 1; the Factory and Starport arrive in chapter 3 with the survey squad's findings
+QUALITY_BAND_OK: repository example mission (structure only, built small on purpose to show the pipeline); a real mission reaches the band in docs/quality-bar.md and never copies this line
 
 ## Map
 - South-west: the player's outpost, mineral line backed by water, bunker toward the road.

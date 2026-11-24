@@ -214,7 +214,7 @@ m.T([P1], [m.cond(2, player=P1, qty=0, unit=BUILDINGS, cmp=10)], [m.text('\x06Ou
 # ---------------- save ----------------
 import placecheck
 log = []; errs = placecheck.autofix(m, log=log.append); print('placement autofix:', log[-1] if log else '-')
-m.save(MAP, 'EXAMPLE: Outpost Nine', 'Example mission (VibeModForge): destroy the hatchery on the ridge.')
+m.save(MAP, 'EXAMPLE: Outpost Nine', 'Example mission (VibeBroodForge): destroy the hatchery on the ridge.')
 m.write_voice_script(os.path.join(OUT, f'Voice_Script_{NAME}.md'), 'EXAMPLE: Outpost Nine')
 print('validate', validate(MAP)); print('timelines', m.check_timelines())
 import shutil

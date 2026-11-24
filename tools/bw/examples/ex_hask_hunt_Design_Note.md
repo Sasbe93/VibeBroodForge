@@ -111,6 +111,7 @@ OBJECTIVE_SHORTCUTS: Storm the Command Post and kill the traitor General Hask ::
 
 ## Tech level
 TECH_LEVEL: late :: stand-alone (late chapter of a Zerg campaign) :: Hive tier with Defilers and Nydus Canals; no Greater Spire or Ultralisk Cavern yet (Guardians, Devourers and Ultralisks come in the finale)
+QUALITY_BAND_OK: repository example mission (structure only, built small on purpose to show the pipeline); a real mission reaches the band in docs/quality-bar.md and never copies this line
 
 ## Campaign rules
 Tech: Hive tier without Greater Spire and Ultralisk Cavern (TECH_LEVEL late). No attack announcements.

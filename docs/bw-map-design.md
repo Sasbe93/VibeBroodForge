@@ -56,5 +56,5 @@ Apply to EVERY BW map (ladder, campaign, fun map). One implementation: `python3 
 - ScmDraft/StarEdit compatibility: strict CHK structure (check_bw_rules strict_chk, sclib.validate).
 - Ranked only: ref-pool tolerances, natural/main sizing, rush distances, symmetry.
 
-## No ports from WC3 (fixed rule)
-Warcraft III rules, checks and ideas are never ported to SC:BW. See bw-campaign-design.md "Game boundary".
+## Game boundary (fixed rule)
+Rules, checks and ideas from other games are never ported to SC:BW. See bw-campaign-design.md "Game boundary".

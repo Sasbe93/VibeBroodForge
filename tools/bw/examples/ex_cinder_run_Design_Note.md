@@ -111,6 +111,7 @@ OBJECTIVE_SHORTCUTS: Recover the captive Queen from the holding pens :: flyer (I
 
 ## Tech level
 TECH_LEVEL: mid :: stand-alone (middle chapter of a Zerg campaign) :: Lair tier (Zergling, Hydralisk, Lurker, Mutalisk, Scourge), no Hive tier; no Queens, so only the rescued Ixa counts
+QUALITY_BAND_OK: repository example mission (structure only, built small on purpose to show the pipeline); a real mission reaches the band in docs/quality-bar.md and never copies this line
 
 ## Campaign rules
 Tech: Lair tier without Queens (TECH_LEVEL mid; only Ixa counts). No attack announcements.

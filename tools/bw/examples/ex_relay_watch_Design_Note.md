@@ -113,6 +113,7 @@ falls, so breaking the hall early never ends the pressure on the relays.
 
 ## Tech level
 TECH_LEVEL: mid :: stand-alone (middle chapter of a Terran campaign) :: Barracks and Factory tier with the Armory (Marine, Firebat, Medic, Vulture, Siege Tank, Goliath); no Starport, no Science Facility tier yet
+QUALITY_BAND_OK: repository example mission (structure only, built small on purpose to show the pipeline); a real mission reaches the band in docs/quality-bar.md and never copies this line
 
 ## Campaign rules
 Tech: Barracks and Factory tier (TECH_LEVEL mid). No attack announcements.

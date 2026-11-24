@@ -171,6 +171,6 @@ for p in (P1, P8):
 m.T([P1], m.target_gone(P1, HATCH, L('Home Nest')), [m.text('\x06The Home Nest has fallen.'), m.wait(2000), m.act(2, flags=0x04)])
 
 import trigsim
-exlib.finish(m, SLUG, NAME, 'EXAMPLE: Cinder Run', 'Example mission (VibeModForge): free the captive Queen and bring her home.',
+exlib.finish(m, SLUG, NAME, 'EXAMPLE: Cinder Run', 'Example mission (VibeBroodForge): free the captive Queen and bring her home.',
              [trigsim.at(300, 'a zergling reaches the pens', trigsim.move(P1, QUEEN, 'Holding Pens')),
               trigsim.at(700, 'the Queen is home', trigsim.move(P1, QUEEN, 'Home Nest'))])

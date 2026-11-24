@@ -33,6 +33,21 @@ python3 tools/bw/examples/ex_ember_pact.py          # any example; --no-checks s
 Requirements as for every BW mission: isomtool and tileset files (`docs/bw-terrain-setup.md`), edge-tts and ffmpeg
 (`DEPENDENCIES.md`).
 
+To run an example through the delivery gate, log a prompt for it first (the gate refuses a map without a provenance
+record or without a logged prompt, `docs/provenance.md`), then build it and run the gate:
+```
+python3 tools/provenance.py add-prompt --map output/examples/ex_relay_watch/Ex_Relay_Watch.scx \
+    --agent "<your agent>" --agent-version <v> --model <model> --model-version <v> --text "Build the Relay Watch example"
+python3 tools/bw/examples/ex_relay_watch.py
+python3 tools/deliver.py output/examples/ex_relay_watch/Ex_Relay_Watch.scx --check-only
+```
+
+## The examples sit below the quality band (on purpose)
+The examples are small so the pipeline stays readable: `tools/bw/quality_metrics.py` puts each of them five to eight
+rows below the reference band of delivered missions (`docs/quality-bar.md`). Their design notes therefore carry
+`QUALITY_BAND_OK: repository example mission ...`. The gate accepts that reason only for the example maps; a real
+mission reaches the band or gives its own reason, and never copies this line.
+
 ## Lessons the examples encode
 - Space guard packs along a route at least about 14 path tiles apart, otherwise the path check merges them into one
   encounter.

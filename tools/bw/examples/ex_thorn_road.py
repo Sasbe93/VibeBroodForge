@@ -182,5 +182,5 @@ m.T([P1], [m.cond(3, loc=L('Warp Conduit'), player=P4, qty=1, unit=TELAR, cmp=0)
 m.T([P1], [m.cond(15, player=P4, qty=1, unit=TELAR, cmp=0)], [m.text('\x06Archivist Telar has fallen. The codex is lost.'), m.wait(2000), m.act(2, flags=0x04)])
 
 import trigsim
-exlib.finish(m, SLUG, NAME, 'EXAMPLE: Thorn Road', 'Example mission (VibeModForge): escort the archivist along the old road.',
+exlib.finish(m, SLUG, NAME, 'EXAMPLE: Thorn Road', 'Example mission (VibeBroodForge): escort the archivist along the old road.',
              [trigsim.at(900, 'the archivist reaches the conduit', trigsim.move(P4, TELAR, 'Warp Conduit'))])

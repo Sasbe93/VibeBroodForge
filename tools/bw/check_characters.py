@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""check_characters.py MAP(.w3x|.scx|.j) or DIR  -- shared WC3/BW/SC2 character check (rule 'Characters').
+"""check_characters.py MAP.scx or DIR  -- character check (rule 'Characters'); speaker lines come from the voice script and notes.
 FAIL: Design_Note lacks '## Characters', or a speaking named character lacks an entry with all fields
       Trait / Goal / Weakness / Voice / Tone / Moments (Quirk optional, character_profile); or the whole cast shares one Tone.
 WARN: every character of a cast of 3+ has a Quirk (character_profile: not everyone needs a tic; others stand out by personality).
@@ -15,17 +15,10 @@ pick = [n for n in notes if stem and n.endswith('_' + stem + '.md')] or [n for n
 note = pick[0] if pick else None
 # speakers + lines
 lines = {}
-jf = arg if arg.endswith('.j') else os.path.join(D, stem + '.j') if stem else None
-if jf and os.path.exists(jf):
-    src = open(jf, errors='ignore').read()
-    txt = {int(k): v for k, v in re.findall(r'set gLine\[(\d+)\]\s*=\s*"((?:[^"\\]|\\.)*)"', src)}
-    for name, k in re.findall(r'call Say(?:NoWait)?\([^,]+,\s*"([^"]+)",\s*(\d+)\)', src):
-        lines.setdefault(name, []).append(txt.get(int(k), ''))
-else:
-    for f in glob.glob(os.path.join(D, '**', '*.md'), recursive=True) + glob.glob(os.path.join(D, 'src', '*.py')):
-        if 'SECRET' in f or 'Design_Note' in f: continue
-        for name, t in re.findall(r'\*\*([A-Z][\w\' .-]{1,40}):\*\*\s*(.+)', open(f, errors='ignore').read()):
-            lines.setdefault(name.strip(), []).append(t)
+for f in glob.glob(os.path.join(D, '**', '*.md'), recursive=True) + glob.glob(os.path.join(D, 'src', '*.py')):
+    if 'SECRET' in f or 'Design_Note' in f: continue
+    for name, t in re.findall(r'\*\*([A-Z][\w\' .-]{1,40}):\*\*\s*(.+)', open(f, errors='ignore').read()):
+        lines.setdefault(name.strip(), []).append(t)
 speakers = [n for n in lines if n.lower() not in GENERIC and not n.lower().startswith('the voice')]
 fails, warns = [], []
 if not note:

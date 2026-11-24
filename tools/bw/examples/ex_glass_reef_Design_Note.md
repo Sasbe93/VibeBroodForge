@@ -101,6 +101,7 @@ SHORTCUT_OK: Keepers :: flyer :: the Observer is the squad's scout; spotting the
 
 ## Tech level
 TECH_LEVEL: early :: stand-alone (early chapter, hero squad) :: the squad builds nothing in this mission (no Probe, Nexus or production), so the tech settings are not used
+QUALITY_BAND_OK: repository example mission (structure only, built small on purpose to show the pipeline); a real mission reaches the band in docs/quality-bar.md and never copies this line
 
 ## Campaign rules
 Tech: not used (the squad builds nothing; TECH_LEVEL early). No attack announcements.

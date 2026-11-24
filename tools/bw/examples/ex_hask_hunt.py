@@ -180,6 +180,6 @@ m.T([P1], [m.SW(1), m.cond(1, qty=0, cmp=10, flags=0), m.cond(15, player=P3, qty
 m.T([P1], m.target_gone(P1, HATCH, L('Home Nest')), [m.text('\x06The Home Nest has fallen.'), m.wait(2000), m.act(2, flags=0x04)])
 
 import trigsim
-exlib.finish(m, SLUG, NAME, 'EXAMPLE: Hask Hunt', 'Example mission (VibeModForge): hunt down the general who burned the first brood.',
+exlib.finish(m, SLUG, NAME, 'EXAMPLE: Hask Hunt', 'Example mission (VibeBroodForge): hunt down the general who burned the first brood.',
              [trigsim.at(900, 'the brood storms the command post', trigsim.spawn(P1, ZERGLING, 'Command Post', 4)),
               trigsim.at(1100, 'the general dies at the fallback bunker', trigsim.kill(P3, HASK, 'Fallback Bunker'))])

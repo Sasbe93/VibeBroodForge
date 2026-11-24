@@ -177,7 +177,7 @@ for n, _, _ in RELAYS:
 m.T([P1], [m.cond(2, player=P1, qty=0, unit=CC, cmp=10)], [m.text('\x06The Command Center has fallen.'), m.wait(2000), m.act(2, flags=0x04)])
 
 import trigsim
-exlib.finish(m, SLUG, NAME, 'EXAMPLE: Relay Watch', 'Example mission (VibeModForge): take the three relays and keep them until the uplink completes.',
+exlib.finish(m, SLUG, NAME, 'EXAMPLE: Relay Watch', 'Example mission (VibeBroodForge): take the three relays and keep them until the uplink completes.',
              sum([[trigsim.at(300 + 120*k, f'the {n} picket falls', trigsim.kill(P2, ANYUNIT, n)),
                    trigsim.at(301 + 120*k, f'marines reach the {n}', trigsim.spawn(P1, MARINE, n, 3))] for k, (n, _, _) in enumerate(RELAYS)], [])
              + [trigsim.at(TIMER + 5, 'the countdown ends with the relays held', lambda *a: None)])

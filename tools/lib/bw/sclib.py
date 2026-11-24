@@ -2,10 +2,10 @@
 import struct, os, math, random, subprocess, json, asyncio, sys, shutil, tempfile
 from eudplib.bindings._rust import mpqapi
 TOOLS=os.path.dirname(os.path.abspath(__file__))
-if os.name=='nt' and not sys.flags.utf8_mode and not os.environ.get('_VMF_UTF8_WARNED'):
+if os.name=='nt' and not sys.flags.utf8_mode and not os.environ.get('_VBF_UTF8_WARNED'):
     # without UTF-8 mode, open() and pipes use the ANSI code page (cp1252): non-ASCII text in design notes, voice
     # scripts and check output turns into mojibake or raises UnicodeEncodeError. README "Windows setup".
-    os.environ['_VMF_UTF8_WARNED']='1'
+    os.environ['_VBF_UTF8_WARNED']='1'
     print('WARNING: Python is not in UTF-8 mode; set PYTHONUTF8=1 (README, Windows setup)',file=sys.stderr)
 TSNAMES=['badlands','platform','install','ashworld','jungle','desert','ice','twilight']
 def _isomtool():
@@ -737,9 +737,9 @@ class Map:
         try:   # hidden provenance record: CHK section VMFP + MPQ file vibeforge\\provenance.json (docs/provenance.md)
             _lib=os.path.join(os.path.dirname(os.path.abspath(__file__)),'..')
             if _lib not in sys.path: sys.path.insert(0,_lib)
-            import vmf_provenance
+            import forge_provenance
             _w={a:open(f,'rb').read() for a,f in s.wavfiles.items()}
-            _chk2,_prov=vmf_provenance.hook_bw(path,chk,_w)
+            _chk2,_prov=forge_provenance.hook_bw(path,chk,_w)
         except Exception as _e: print('WARNING provenance record not written: %r'%(_e,)); _chk2=chk
         tmp=path+'.chk'; open(tmp,'wb').write(_chk2)
         try:   # computer_ai_started / ai_workers_mining: warn at build time, predelivery check 48 FAILs

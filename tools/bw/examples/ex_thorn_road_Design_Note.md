@@ -110,6 +110,7 @@ Start resources 300/150.
 
 ## Tech level
 TECH_LEVEL: mid :: stand-alone (middle chapter of a Protoss campaign) :: Gateway, Citadel, Robotics and Stargate tier (Zealots with Leg Enhancements, Dragoons, Reavers, Shuttles, Scouts, Corsairs); no Templar Archives tier yet
+QUALITY_BAND_OK: repository example mission (structure only, built small on purpose to show the pipeline); a real mission reaches the band in docs/quality-bar.md and never copies this line
 
 ## Campaign rules
 Tech: Citadel, Robotics and Stargate tier (TECH_LEVEL mid). No attack announcements.

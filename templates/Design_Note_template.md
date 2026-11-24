@@ -1,7 +1,7 @@
 # <Mission name> - Design Note
 
-Single-player Warcraft III mission (TFT 1.31 format, <tileset>) or StarCraft: Brood War mission (.scx, <tileset>, <size>). One-paragraph premise.
-Brood War worked example: templates/Design_Note_example_bw_mission.md.
+StarCraft: Brood War mission (.scx, <tileset>, <size>). One-paragraph premise.
+Worked example: templates/Design_Note_example_bw_mission.md (structure only: never copy its QUALITY_BAND_OK line).
 
 ## Campaign outline
 Chapter list of the campaign this mission belongs to (a stand-alone mission still gets a short outline first).
@@ -14,7 +14,7 @@ target count), e.g. not "destroy 3 targets before a countdown" twice in a row.
 - Required (defeat conditions, visible in the quest log): ...
 - Optional (if any): ... Reward (if any): ...
 
-## Side objectives (StarCraft maps)
+## Side objectives
 One line per optional objective (none is fine). Vary the type: rescue or free a unit that joins, capture or protect a
 place, reach or hold a place, escort, gain an ally, a secret, a choice. At most one destroy side objective per mission and
 never in two neighbouring missions. The reward follows from the objective (see Rewards below), none is fine.
@@ -48,7 +48,7 @@ SCENE_VIEW: <scene> :: <location name> :: <alliance-vision | revealer | own unit
 before the first line, removed after the scene unless the vision should stay; own units present: the player's units
 stand there at that moment.)
 
-## Planned duration (every mission, Brood War, Warcraft III and StarCraft II)
+## Planned duration (every mission)
 Declare how long the mission should take on Normal, and give each main and side objective a share of that time.
 Walking is only a small part of the budget; the rest is fighting, choices and pressure. Path encounters scale with
 that budget: about one real encounter or decision point per 1-2 minutes of the objective's time, and a rescue, reach
@@ -68,19 +68,19 @@ choke, means a redesign.
 OBJECTIVE_PATHS: <objective> :: <path(s) with length in tiles and travel time> :: <threats on the way / waves and directions> :: <why it is a challenge>
 OBJECTIVE_PATHS_EASY_OK: <reason>            (only when a short, safe or single-choke path is deliberate)
 
-## Shortcuts (Brood War and Warcraft III)
+## Shortcuts
 For each reach, rescue, capture or escort objective: which of the player's units, buildings and abilities could skip
-the guarded path (lift-off, flyers, transports, Recall/Nydus, Blink/Mass Teleport/Zeppelin/teleport items, cloak,
+the guarded path (lift-off, flyers, drops, Recall, Nydus Canal, cloak, burrow,
 building next to the target), and how the mission blocks each one, or why skipping is fine.
 OBJECTIVE_SHORTCUTS: <objective|location> :: <vectors the player has> :: <how each one is blocked>
 SHORTCUT_OK: <objective|location> :: <vector> :: <why it is fine>      (only for an accepted shortcut)
 
-## Pressure sources (Brood War and Warcraft III)
+## Pressure sources
 Which bases or off-map sources feed the waves and the AI. At least two independent sources; one early-reachable base
 that is not the objective must not switch off all attacks.
 PRESSURE_SINGLE_OK: <reason>      (only when one source is the design)
 
-## Tech level (Brood War and Warcraft III)
+## Tech level
 TECH_LEVEL: <early|mid|late|full> :: <chapter, e.g. M2 of 8, or stand-alone> :: <what the player gets and why>
 
 ## Escort route (only for escort missions)
@@ -91,8 +91,8 @@ breaking an enemy base.)
 
 ## Briefing and voice
 - Briefing: who speaks (portraits), what the objectives screen shows.
-- Voiced lines: every story line voiced (WC3: docs/wc3-storytelling-cinematics.md; Brood War: edge-tts, docs/bw-campaign-design.md
-  "Briefing and voiced dialogue"); status lines only as text. Exemptions need a reason: NO_BRIEFING_OK: / NO_VOICE_OK:
+- Voiced lines: every story line voiced (edge-tts with delivery notes, docs/bw-campaign-design.md "Briefing and voiced
+  dialogue", docs/voice-delivery-markup.md); status lines only as text. Exemptions need a reason: NO_BRIEFING_OK: / NO_VOICE_OK:
 - Voice per character: engine voice, pitch/rate, filter, delivery profile.
 
 ## Map
@@ -125,7 +125,7 @@ PHASES: base, explore, combat, defense, boss
 - none (or: rule, deviation, reason)
 
 ## Delivery gate
-`python3 tools/deliver.py <map>` refuses this note if a required line or section is missing (WC3: TARGET_DURATION,
-OBJECTIVE_PATHS, TECH_LEVEL, ## Characters, ## Design Review, REQUIRED_WHY, PHASES or ## Flow; BW: TARGET_DURATION,
+`python3 tools/deliver.py <map>` refuses this note if a required line or section is missing (TARGET_DURATION,
 OBJECTIVE_PATHS, TECH_LEVEL, ## Characters, MISSION_TYPE, START_SETUP), if it is not English, or if any check FAILs.
-QUALITY_BAND_OK: <reason>     (WC3, only when the map is deliberately far below docs/quality-bar.md, e.g. a small interior map)
+It also runs `tools/bw/quality_metrics.py` and refuses a mission 4 or more rows below the band in docs/quality-bar.md:
+QUALITY_BAND_OK: <reason>     (only when the map is deliberately below the band, e.g. a short no-base hero mission on a small map)

@@ -197,7 +197,7 @@ m.T([P1], [m.SW(2, False), m.cond(2, player=P1, qty=0, unit=MEN, cmp=10)], [m.te
 m.T([P1], [m.cond(15, player=P4, qty=1, unit=QUILL, cmp=0)], [m.text('\x06Marshal Quill has fallen. Fort Wren is lost.'), m.wait(2000), m.act(2, flags=0x04)])
 
 import trigsim
-exlib.finish(m, SLUG, NAME, 'EXAMPLE: Ember Pact', 'Example mission (VibeModForge): reach the besieged fort, win an ally, break the siege, burn the hive.',
+exlib.finish(m, SLUG, NAME, 'EXAMPLE: Ember Pact', 'Example mission (VibeBroodForge): reach the besieged fort, win an ally, break the siege, burn the hive.',
              [trigsim.at(240, 'the strike team reaches the fort', trigsim.move(P1, ZEALOT, 'Fort Wren', 2)),
               trigsim.at(800, 'both siege nests fall', lambda s: [trigsim.kill(P2, HATCH, n)(s) for n, _, _ in NESTS]),
               trigsim.at(1500, 'the Brood Hive falls', trigsim.kill(P2, HIVE, 'Brood Hive'))])

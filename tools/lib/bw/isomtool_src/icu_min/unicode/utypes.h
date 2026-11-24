@@ -1,6 +1,6 @@
 /* Minimal stand-in for ICU's unicode/utypes.h: only what Chkdraft's cross_cut/simple_icu.cpp needs.
    Used when isomtool is built without the real ICU library (default on Windows, see ../CMakeLists.txt).
-   Values match ICU so code that tests error codes behaves the same. Part of VibeModForge (MIT). */
+   Values match ICU so code that tests error codes behaves the same. Part of VibeBroodForge (MIT). */
 #pragma once
 #include <stdint.h>
 #ifdef __cplusplus

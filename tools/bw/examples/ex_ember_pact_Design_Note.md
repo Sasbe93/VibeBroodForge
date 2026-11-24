@@ -118,6 +118,7 @@ OBJECTIVE_SHORTCUTS: Fort Academy :: flyer (the Observer) :: the same two hydral
 
 ## Tech level
 TECH_LEVEL: late :: stand-alone (late chapter of a Protoss campaign) :: everything up to the Templar Archives tier (High and Dark Templar, Archons, Reavers, Scouts, Corsairs); no Fleet Beacon or Arbiter Tribunal, so no Carriers, Arbiters or Recall
+QUALITY_BAND_OK: repository example mission (structure only, built small on purpose to show the pipeline); a real mission reaches the band in docs/quality-bar.md and never copies this line
 
 ## Campaign rules
 Tech: late tier without Carriers and Arbiters (TECH_LEVEL late). No attack announcements.

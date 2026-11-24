@@ -7,7 +7,7 @@
  * code points, substitution of each maximal ill-formed UTF-8 subpart, preflighting, NUL termination and its
  * warning) and are cross-checked against the real ICU by test_icu_min.c.
  *
- * Part of VibeModForge (MIT).
+ * Part of VibeBroodForge (MIT).
  */
 #include "unicode/ustring.h"
 #include <stddef.h>

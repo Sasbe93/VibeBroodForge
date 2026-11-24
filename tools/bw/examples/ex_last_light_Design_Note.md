@@ -88,6 +88,7 @@ no Bring objective).
 
 ## Tech level
 TECH_LEVEL: mid :: stand-alone (middle chapter of a Terran campaign) :: Barracks, Factory and Starport tier (Siege Tanks, Goliaths, Wraiths, Dropships); no Science Facility tier, so no Vessels, Battlecruisers or nukes for the hold
+QUALITY_BAND_OK: repository example mission (structure only, built small on purpose to show the pipeline); a real mission reaches the band in docs/quality-bar.md and never copies this line
 
 ## Campaign rules
 Tech: Factory and Starport tier (TECH_LEVEL mid). No attack announcements.

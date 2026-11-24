@@ -1,18 +1,16 @@
-"""vmf_provenance: hidden, externally readable provenance record for VibeModForge maps and campaigns.
+"""forge_provenance: hidden, externally readable provenance record for VibeBroodForge maps and campaign folders.
 
-What it records (format "vibeforge-provenance/1", JSON):
+What it records (format "vibeforge-provenance/1", JSON; the format id is shared with the sister project and
+with maps built before the split of the former VibeModForge repository):
   - every prompt that went into a map or campaign (count, text or redacted hash, time),
   - the agent (Cursor, Grok Bot, Claude Code, Codex, Dots, ...) and its version, the AI model and its version,
-  - the tool versions: VibeModForge (umbrella), VibeBroodForge (StarCraft: Brood War part), VibeWarForge
-    (Warcraft III part), plus the git commit of the tools,
+  - the tool and its version (VibeBroodForge, StarCraft: Brood War) plus the git commit of the tools,
   - build events (prompt edits, written by our tools on every build or stamp),
-  - human edits made in an editor (World Editor, ScmDraft, StarEdit), DETECTED by a content fingerprint:
+  - human edits made in an editor (ScmDraft, StarEdit), DETECTED by a content fingerprint:
     editors do not log edits, so we can only see THAT parts changed since the last tool save, not who or why.
 
 Where it is stored (see docs/provenance.md for the editor-survival evidence):
-  WC3 .w3x/.w3m  war3mapImported\\vibeforge_provenance.json, listed in war3map.imp (World Editor keeps imports).
-  WC3 .w3n       war3campaignImported\\vibeforge_provenance.json, listed in war3campaign.imp.
-  BW  .scx/.scm  CHK section 'VMFP' inside staredit\\scenario.chk plus MPQ file vibeforge\\provenance.json.
+  BW  .scx/.scm  CHK section 'VMFP' (format id kept from before the split) inside staredit\\scenario.chk plus MPQ file vibeforge\\provenance.json.
   BW campaign    vibeforge_campaign_provenance.json in the campaign folder (BW has no campaign container).
 The working ledger (all prompts, also before the first build) is a sidecar file <map>.provenance.json next to the
 map in output/ (git-ignored).
@@ -22,14 +20,11 @@ import os, sys, json, hashlib, struct, time, re, subprocess, uuid, datetime, shu
 FORMAT = 'vibeforge-provenance/1'
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
-WC3_LIB = os.path.join(HERE, 'wc3')
-if WC3_LIB not in sys.path: sys.path.insert(0, WC3_LIB)
 
-WC3_MAP_PATH = 'war3mapImported\\vibeforge_provenance.json'
-WC3_CAMP_PATH = 'war3campaignImported\\vibeforge_provenance.json'
 BW_SECTION = b'VMFP'
 BW_MPQ_PATH = 'vibeforge\\provenance.json'
 BW_CHK = 'staredit\\scenario.chk'
+TOOL = 'VibeBroodForge'   # this repository; records written before the split name the former umbrella tool too
 KNOWN_AGENTS = ['Cursor', 'Grok Bot', 'Claude Code', 'Codex', 'Dots', 'Copilot', 'Aider', 'Windsurf', 'Gemini CLI', 'human', 'other']
 
 # ---------------------------------------------------------------- versions
@@ -39,9 +34,7 @@ def _read_version(rel):
     except OSError: return 'unknown'
 
 def tool_versions():
-    v = {'VibeModForge': _read_version('VERSION'),
-         'VibeBroodForge': _read_version(os.path.join('tools', 'bw', 'VERSION')),
-         'VibeWarForge': _read_version(os.path.join('tools', 'wc3', 'VERSION'))}
+    v = {'tool': TOOL, TOOL: _read_version('VERSION')}
     try:
         c = subprocess.run(['git', '-C', ROOT, 'rev-parse', '--short=12', 'HEAD'], capture_output=True, text=True, timeout=5)
         if c.returncode == 0:
@@ -79,60 +72,6 @@ def _blocks(points, w, h, size, getter):
                 hh.update(getter(y * w + bx, min(w, bx + size) - bx))
             out['%d,%d' % (bx // size, by // size)] = hh.hexdigest()[:8]
     return out
-
-def _w3e_part(d):
-    try:
-        if d[:4] != b'W3E!': raise ValueError
-        o = 9; o += 4; nt = struct.unpack_from('<I', d, o)[0]; o += 4; tiles = d[o:o + 4 * nt]; o += 4 * nt
-        nc = struct.unpack_from('<I', d, o)[0]; o += 4; cliffs = d[o:o + 4 * nc]; o += 4 * nc
-        w, h = struct.unpack_from('<II', d, o); o += 8 + 8
-        pts = d[o:o + 7 * w * h]
-        if len(pts) != 7 * w * h: raise ValueError
-        core = tiles + cliffs + struct.pack('<II', w, h) + pts
-        return {'sha': sha(core), 'info': {'w': w, 'h': h, 'tiles': nt},
-                'blocks': _blocks(pts, w, h, 32, lambda i, n: pts[7 * i:7 * (i + n)])}
-    except Exception:
-        return {'sha': sha(d), 'info': {'raw': True}}
-
-def _count_at12(d):
-    try: return struct.unpack_from('<I', d, 12)[0]
-    except Exception: return None
-
-WC3_PARTS = [  # (part, predicate on lowercase name)
-    ('terrain', lambda n: n == 'war3map.w3e'),
-    ('units', lambda n: n == 'war3mapunits.doo'),
-    ('doodads', lambda n: n == 'war3map.doo'),
-    ('triggers', lambda n: n in ('war3map.wtg', 'war3map.wct', 'war3map.j', 'scripts\\war3map.j', 'war3map.lua')),
-    ('object_data', lambda n: n[-4:] in ('.w3u', '.w3t', '.w3a', '.w3b', '.w3d', '.w3h', '.w3q') and n.startswith('war3map')),
-    ('strings', lambda n: n == 'war3map.wts'),
-    ('map_info', lambda n: n in ('war3map.w3i', 'war3mapmisc.txt', 'war3mapskin.txt', 'war3mapextra.txt')),
-    ('regions_cameras_sounds', lambda n: n in ('war3map.w3r', 'war3map.w3c', 'war3map.w3s')),
-    ('derived', lambda n: n in ('war3map.wpm', 'war3map.shd', 'war3map.mmp', 'war3mapmap.blp', 'war3mapmap.tga', 'war3mappreview.tga', 'war3mappath.tga')),
-    ('campaign', lambda n: n.startswith('war3campaign')),
-    ('maps', lambda n: n.endswith(('.w3x', '.w3m'))),
-]
-WC3_SKIP = {'(listfile)', '(attributes)', '(signature)', 'war3map.imp', 'war3campaign.imp',
-            WC3_MAP_PATH.lower(), WC3_CAMP_PATH.lower()}
-DERIVED_NOTE = 'derived files only (pathing, shadows, minimap, preview): the World Editor regenerates these on every save'
-
-def fingerprint_wc3(files):
-    parts = {}
-    for name in sorted(files, key=str.lower):
-        ln = name.lower()
-        if ln in WC3_SKIP or name.startswith('_'): continue
-        d = files[name]
-        part = next((p for p, f in WC3_PARTS if f(ln)), 'imports')
-        if ln.endswith(('.w3x', '.w3m')):   # nested maps: fingerprint without their own provenance file
-            try: d = json.dumps(fingerprint_wc3(read_wc3_files(d))['sha']).encode()
-            except Exception: pass
-        parts.setdefault(part, {'files': {}})['files'][name] = sha(d)
-        if ln == 'war3map.w3e': parts[part].update(_w3e_part(d))
-        if ln in ('war3mapunits.doo', 'war3map.doo'): parts[part].setdefault('info', {})['count'] = _count_at12(d)
-        if ln in ('war3map.j',):
-            parts[part].setdefault('info', {})['functions'] = len(re.findall(rb'(?m)^\s*function\s', d))
-    for p in parts.values():
-        p['sha'] = sha(json.dumps(p['files'], sort_keys=True)) if 'blocks' not in p else sha(p['sha'] + json.dumps(p['files'], sort_keys=True))
-    return {'scheme': 'wc3/1', 'parts': parts, 'sha': sha(json.dumps({k: v['sha'] for k, v in parts.items()}, sort_keys=True))}
 
 BW_PARTS = {
     'terrain': ['MTXM', 'TILE', 'ISOM', 'DIM ', 'ERA '],
@@ -207,67 +146,6 @@ def describe_diff(diff):
     if set(diff) == {'derived'}: return DERIVED_NOTE
     return ' | '.join('%s: %s' % (k, v) for k, v in diff.items())
 
-# ---------------------------------------------------------------- WC3 MPQ IO
-def _wc3_imp_parse(b):
-    if not b or len(b) < 8: return []
-    n = struct.unpack_from('<i', b, 4)[0]; p = 8; out = []
-    for _ in range(n):
-        fl = b[p]; e = b.index(b'\0', p + 1); out.append((fl, b[p + 1:e].decode('latin1'))); p = e + 1
-    return out
-
-def _wc3_imp_bytes(entries):
-    b = struct.pack('<ii', 1, len(entries))
-    for fl, path in entries: b += bytes([fl]) + path.encode('latin1') + b'\0'
-    return b
-
-def read_wc3_files(data):
-    import mpqread
-    q = mpqread.MPQ(data)
-    lst = q.read('(listfile)')
-    if lst is None: raise ValueError('no (listfile): cannot enumerate the archive')
-    files = {}
-    for name in lst.decode('latin1').replace('\r', '').split('\n'):
-        name = name.strip()
-        if not name or name in files: continue
-        try: d = q.read(name)
-        except Exception as e: raise ValueError('cannot read %s: %r' % (name, e))
-        if d is not None: files[name] = d
-    return files
-
-def _is_campaign(files): return any(n.lower() == 'war3campaign.w3f' for n in files)
-
-def _find(files, path):
-    for n in files:
-        if n.lower() == path.lower(): return n
-
-def record_from_wc3_files(files):
-    n = _find(files, WC3_CAMP_PATH if _is_campaign(files) else WC3_MAP_PATH) or _find(files, WC3_MAP_PATH)
-    return json.loads(files[n].decode('utf8')) if n else None
-
-def attach_wc3(files, record):
-    """put the record into the archive dict as an import (survives World Editor saves)"""
-    camp = _is_campaign(files)
-    path = WC3_CAMP_PATH if camp else WC3_MAP_PATH
-    imp_name = _find(files, 'war3campaign.imp' if camp else 'war3map.imp') or ('war3campaign.imp' if camp else 'war3map.imp')
-    old = _find(files, path)
-    if old: del files[old]
-    files[path] = json.dumps(record, indent=1, ensure_ascii=False).encode('utf8')
-    ent = [e for e in _wc3_imp_parse(files.get(imp_name, b'')) if e[1].lower() != path.lower()]
-    ent.append((13, path))   # 13 = custom path (what the Reforged Import Manager writes)
-    files[imp_name] = _wc3_imp_bytes(ent)
-
-def write_wc3_raw(path, files):
-    import mpq
-    files = {k: v for k, v in files.items() if k.lower() not in ('(listfile)', '(attributes)', '(signature)')}
-    prefix = b''
-    try:
-        d = open(path, 'rb').read(); o = d.find(b'MPQ\x1a')
-        if o > 0: prefix = d[:o]        # keep the HM3W header of .w3x maps
-    except OSError: pass
-    tmp = path + '.vmftmp'
-    mpq.write_mpq(tmp, files, prefix=prefix, raw=True)
-    os.replace(tmp, path)
-
 # ---------------------------------------------------------------- BW MPQ IO
 def _mpqapi():
     from eudplib.bindings._rust import mpqapi
@@ -322,12 +200,12 @@ def chk_with_record(chk, record):
 def write_bw(path, chk, other, record):
     M = _mpqapi()
     other = {k: v for k, v in other.items() if k != BW_MPQ_PATH}
-    tmpd = tempfile.mkdtemp(prefix='vmf_')
+    tmpd = tempfile.mkdtemp(prefix='prov_')
     try:
         newchk = chk_with_record(chk, record)
         fc = os.path.join(tmpd, 'scenario.chk'); open(fc, 'wb').write(newchk)
         fj = os.path.join(tmpd, 'prov.json'); open(fj, 'wb').write(json.dumps(record, indent=1, ensure_ascii=False).encode('utf8'))
-        out = path + '.vmftmp'
+        out = path + '.provtmp'
         if os.path.exists(out): os.remove(out)
         m = M.MPQ.create(out, 3, 64 + 2 * len(other))
         m.add_file(BW_CHK, fc)
@@ -341,7 +219,6 @@ def write_bw(path, chk, other, record):
 # ---------------------------------------------------------------- ledger + record
 def game_of(path):
     e = os.path.splitext(path)[1].lower()
-    if e in ('.w3x', '.w3m', '.w3n'): return 'wc3'
     if e in ('.scx', '.scm'): return 'bw'
     raise ValueError('unknown map type: ' + path)
 
@@ -349,7 +226,7 @@ def ledger_path(map_path): return map_path + '.provenance.json'
 
 def new_record(map_path, game=None):
     game = game or game_of(map_path)
-    return {'format': FORMAT, 'kind': 'campaign' if map_path.lower().endswith('.w3n') else 'map', 'game': game,
+    return {'format': FORMAT, 'kind': 'map', 'game': game,
             'name': os.path.splitext(os.path.basename(map_path))[0], 'record_id': str(uuid.uuid4()),
             'created': now(), 'prompts': [], 'events': [], 'fingerprint': None, 'summary': {}}
 
@@ -364,6 +241,13 @@ def save_ledger(map_path, rec):
     tmp = ledger_path(map_path) + '.tmp'
     json.dump(rec, open(tmp, 'w', encoding='utf8'), indent=1, ensure_ascii=False); os.replace(tmp, ledger_path(map_path))
 
+def _tool_label(tools):
+    """'VibeBroodForge 0.10.0' for records of this repository; records written before the split (formerly VibeModForge,
+    one umbrella repository) list the umbrella version and both game parts"""
+    if tools.get('tool'): return '%s %s' % (tools['tool'], tools.get(tools['tool'], '?'))
+    legacy = [k for k in ('VibeModForge', 'VibeBroodForge', 'VibeWarForge') if k in tools]
+    return ' / '.join('%s %s' % (k, tools[k]) for k in legacy) or 'unknown'
+
 def summarize(rec):
     pr = rec.get('prompts', []); ev = rec.get('events', [])
     rec['summary'] = {
@@ -372,8 +256,7 @@ def summarize(rec):
         'human_edit_count': sum(1 for e in ev if e['type'] == 'human_edit'),
         'agents': sorted({'%s %s' % (p.get('agent'), p.get('agent_version') or '?') for p in pr}),
         'models': sorted({('%s %s' % (p.get('model'), p.get('model_version') or '')).strip() for p in pr}),
-        'tool_versions_used': sorted({'%s/%s/%s' % (e.get('tools', {}).get('VibeModForge'), e.get('tools', {}).get('VibeBroodForge'),
-                                                  e.get('tools', {}).get('VibeWarForge')) for e in ev if e['type'] in ('build', 'stamp')}),
+        'tool_versions_used': sorted({_tool_label(e.get('tools', {})) for e in ev if e['type'] in ('build', 'stamp')}),
         'first': (pr[0]['time'] if pr else rec.get('created')), 'last_build': next((e['time'] for e in reversed(ev) if e['type'] == 'build'), None),
     }
     if rec.get('kind') == 'campaign' and rec.get('maps'):
@@ -405,10 +288,7 @@ def add_prompt(map_paths, text, **kw):
 
 def read_map(path):
     """-> (record or None, current fingerprint, location string)"""
-    g = game_of(path)
-    if g == 'wc3':
-        files = read_wc3_files(open(path, 'rb').read())
-        return record_from_wc3_files(files), fingerprint_wc3(files), 'import ' + (WC3_CAMP_PATH if _is_campaign(files) else WC3_MAP_PATH)
+    game_of(path)
     chk, other = read_bw(path)
     rec, where = record_from_bw(chk, other)
     wavs = {k: v for k, v in other.items() if k != BW_MPQ_PATH}
@@ -466,22 +346,6 @@ def _existing_on_disk(path):
     except Exception as e:
         print('provenance: could not read the previous map %s (%r)' % (path, e)); return None
 
-def hook_wc3(path, files):
-    """mpq.write_mpq calls this before writing: adds the record as an import"""
-    if not enabled(): return
-    ext = os.path.splitext(path)[1].lower()
-    if ext not in ('.w3x', '.w3m', '.w3n'): return
-    prev = _existing_on_disk(path)
-    if prev and prev.get('_current_fp') and prev.get('fingerprint') and prev['fingerprint']['sha'] != prev['_current_fp']['sha']:
-        bk = path + '.human-edited-%s%s' % (time.strftime('%Y%m%d-%H%M%S'), ext)
-        shutil.copy2(path, bk)
-        print('WARNING provenance: %s was changed outside the tools since its last build (%s). Backup: %s. '
-              'The rebuild replaces those human edits.' % (path, describe_diff(diff_fingerprints(prev['fingerprint'], prev['_current_fp'])), bk))
-    fp = fingerprint_wc3(files)
-    rec = build_record(path, fp, prev)
-    if rec['kind'] == 'campaign': campaign_summary_wc3(rec, files)
-    attach_wc3(files, rec)
-
 def hook_bw(path, chk, wavs):
     """sclib.Map.save calls this: returns (chk with VMFP section, json bytes for the MPQ file)"""
     if not enabled(): return chk, None
@@ -497,23 +361,14 @@ def hook_bw(path, chk, wavs):
 # ---------------------------------------------------------------- operations on existing maps
 def stamp(path, note=None):
     """embed/refresh the record in an existing map without rebuilding it (maps from other tools or fix copies)"""
-    g = game_of(path)
-    if g == 'wc3':
-        files = read_wc3_files(open(path, 'rb').read())
-        prev = record_from_wc3_files(files)
-        cur = fingerprint_wc3(files)
-        if prev: prev['_current_fp'] = cur
-        rec = build_record(path, cur, prev, event='stamp', note=note)
-        if rec['kind'] == 'campaign': campaign_summary_wc3(rec, files)
-        attach_wc3(files, rec); write_wc3_raw(path, files)
-    else:
-        chk, other = read_bw(path)
-        prev, _ = record_from_bw(chk, other)
-        wavs = {k: v for k, v in other.items() if k != BW_MPQ_PATH}
-        cur = fingerprint_bw(chk, wavs)
-        if prev: prev['_current_fp'] = cur
-        rec = build_record(path, cur, prev, event='stamp', note=note)
-        write_bw(path, chk, other, rec)
+    game_of(path)
+    chk, other = read_bw(path)
+    prev, _ = record_from_bw(chk, other)
+    wavs = {k: v for k, v in other.items() if k != BW_MPQ_PATH}
+    cur = fingerprint_bw(chk, wavs)
+    if prev: prev['_current_fp'] = cur
+    rec = build_record(path, cur, prev, event='stamp', note=note)
+    write_bw(path, chk, other, rec)
     return rec
 
 def check(path, record=False):
@@ -527,24 +382,8 @@ def check(path, record=False):
         rec = _merge_ledger(rec, load_ledger(path))
         rec['events'].append(ev); rec['fingerprint'] = cur
         summarize(rec); save_ledger(path, rec)
-        if game_of(path) == 'wc3':
-            files = read_wc3_files(open(path, 'rb').read()); attach_wc3(files, rec); write_wc3_raw(path, files)
-        else:
-            chk, other = read_bw(path); write_bw(path, chk, other, rec)
+        chk, other = read_bw(path); write_bw(path, chk, other, rec)
     return 'human_edit', diff
-
-def campaign_summary_wc3(rec, files):
-    maps = []
-    for n, d in files.items():
-        if not n.lower().endswith(('.w3x', '.w3m')): continue
-        try: r = record_from_wc3_files(read_wc3_files(d))
-        except Exception: r = None
-        if r:
-            summarize(r)
-            maps.append({'file': n, 'name': r.get('name'), 'record_id': r.get('record_id'), 'prompt_ids': [p['id'] for p in r['prompts']],
-                         **{k: r['summary'][k] for k in ('prompt_count', 'build_count', 'human_edit_count')}})
-        else: maps.append({'file': n, 'record': None})
-    rec['maps'] = maps; summarize(rec)
 
 def campaign_bw(folder, out=None):
     """BW has no campaign container: write vibeforge_campaign_provenance.json next to the missions"""

@@ -145,6 +145,6 @@ for p in (P1, P8):
 
 # ---------------- save + checks ----------------
 import trigsim
-exlib.finish(m, SLUG, NAME, 'EXAMPLE: Glass Reef', 'Example mission (VibeModForge): lead a hero squad across the reef.',
+exlib.finish(m, SLUG, NAME, 'EXAMPLE: Glass Reef', 'Example mission (VibeBroodForge): lead a hero squad across the reef.',
              [trigsim.at(100, 'Aunvar reaches the shrine', trigsim.move(P1, AUNVAR, 'Crystal Shrine')),
               trigsim.at(400, 'Aunvar reaches the Waygate', trigsim.move(P1, AUNVAR, 'Waygate'))])

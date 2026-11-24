@@ -2,9 +2,8 @@
 
 This is the ONLY supported way to hand a map, mission or campaign chapter to a user. It refuses (exit 1) when
   - no design note sits next to the map (Design_Note*.md) or a required line/section is missing,
-  - any check reports a FAIL or crashes (WC3: tools/wc3/run_all_checks.sh, BW: tools/bw/predelivery_check.py,
-    ranked maps: check_ranked_wc3.py / check_ranked_bw.py),
-  - a WC3 mission is far below the reference quality band in several rows (tools/wc3/quality_metrics.py,
+  - any check reports a FAIL or crashes (tools/bw/predelivery_check.py; ranked maps: tools/bw/check_ranked_bw.py),
+  - a mission is far below the reference quality band in several rows (tools/bw/quality_metrics.py,
     docs/quality-bar.md) without a `QUALITY_BAND_OK: <reason>` line in the design note,
   - delivered text (design note, voice script) is not English,
   - the map has no provenance record, no logged prompt, or an unrecorded human edit (tools/provenance.py verify,
@@ -14,9 +13,8 @@ PNG previews and GATE_REPORT.json (what ran, the result of every check, the repo
 their name are never packed. The gate cannot judge how the map looks or plays: say what was not tested in-game.
 
 usage (from the repository root):
-  python3 tools/deliver.py output/MyMission.w3x            # WC3 campaign mission
-  python3 tools/deliver.py output/MyMission.scx            # Brood War campaign mission
-  python3 tools/deliver.py output/MyMelee.w3x --ranked     # ranked / melee map (no design note needed)
+  python3 tools/deliver.py output/MyMission.scx            # campaign mission
+  python3 tools/deliver.py output/MyMelee.scx --ranked     # ranked / melee map (no design note needed)
   options: --note PATH (design note elsewhere), --out DIR, --check-only (run the gate, write no zip)
 """
 import sys, os, re, glob, json, subprocess, tempfile, zipfile, datetime
@@ -32,37 +30,20 @@ REQUIRED_COMMON = [
     (r'^#+\s*Characters', '## Characters section'),
 ]
 REQUIRED = {
-    'wc3': REQUIRED_COMMON + [
-        (r'^#+\s*Design Review', '## Design Review section (pacing, rewards, fairness, abilities, fun, verdict)'),
-        (r'REQUIRED_WHY', 'REQUIRED_WHY line for every required objective'),
-        (r'^\s*PHASES:|^#+\s*(Mission )?Flow', 'PHASES: line or ## Flow section'),
-    ],
     'bw': REQUIRED_COMMON + [
         (r'^\s*MISSION_TYPE:', 'MISSION_TYPE: line'),
         (r'^\s*START_SETUP:', 'START_SETUP: line'),
     ],
 }
 GERMAN = re.compile(r'[äöüÄÖÜß]|\b(und|nicht|der|das|mit|wird|sind|oder|auch|werden|eine|einen|Einheit|Aufgabe|Spieler)\b')   # case-sensitive: 'MIT' licence is English
-QUALITY_REFUSE_ROWS = 5   # rows below the reference band that refuse a WC3 mission without QUALITY_BAND_OK
+QUALITY_REFUSE_ROWS = 4   # rows below the reference band that refuse a mission without QUALITY_BAND_OK (docs/quality-bar.md)
 
 
 def preflight(game):
     """Dependencies the checks need. Without them many checks crash or skip, so the gate stops first
     (external/README.md says where each comes from)."""
     out = []
-    if game == 'wc3':
-        stock = os.environ.get('WC3_STOCK_DATA') or os.path.join(ROOT, 'external', 'wc3data', 'warpack-stock-data-0.0.1', 'data')
-        for f in ('units/unitskin.txt', 'units/unitbalance.slk', 'doodads/doodads.slk'):
-            if not os.path.isfile(os.path.join(stock, f)):
-                out.append(f'missing stock SLK data {f} under {os.path.relpath(stock, ROOT)} (external/README.md: warpack-stock-data, '
-                           'or set WC3_STOCK_DATA); about a third of the WC3 checks crash without it'); break
-        hdr = os.environ.get('JASS_HEADERS') or os.path.join(ROOT, 'external', 'jass')
-        if not os.path.isfile(os.path.join(hdr, 'common.j')):
-            out.append('missing JASS headers external/jass/common.j (external/README.md, or set JASS_HEADERS)')
-        pj = os.environ.get('PJASS') or os.path.join(ROOT, 'external', 'pjass', 'pjass')
-        if not (os.path.isfile(pj) or os.path.isfile(pj + '.exe')):
-            out.append('missing pjass (external/README.md, or set PJASS): the script syntax check cannot run')
-    else:
+    if game == 'bw':
         iso = os.environ.get('ISOMTOOL') or os.path.join(ROOT, 'tools', 'lib', 'bw', 'isomtool')
         if not (os.path.isfile(iso) or os.path.isfile(iso + '.exe')):
             out.append('missing isomtool (python3 tools/bw/build_isomtool.py, docs/bw-terrain-setup.md)')
@@ -100,9 +81,9 @@ def gate(mp, ranked=False, note=None):
     rep = {'map': os.path.basename(mp), 'time': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
            'problems': [], 'checks': {}, 'mode': None}
     ext = os.path.splitext(mp)[1].lower()
-    game = 'wc3' if ext in ('.w3x', '.w3m') else 'bw' if ext in ('.scx', '.scm') else None
+    game = 'bw' if ext in ('.scx', '.scm') else None
     if not game:
-        rep['problems'].append(f'unsupported map type {ext} (campaign .w3n: run the gate on every chapter .w3x)'); return rep
+        rep['problems'].append(f'unsupported map type {ext} (StarCraft: Brood War .scx/.scm; a campaign: run the gate on every mission)'); return rep
     rep['game'] = game
     try: rep['commit'] = subprocess.check_output(['git', '-C', ROOT, 'rev-parse', '--short', 'HEAD'], text=True).strip()
     except Exception: rep['commit'] = None
@@ -111,8 +92,8 @@ def gate(mp, ranked=False, note=None):
     if ranked:
         rep['mode'] = 'ranked'
         provenance(mp, rep)
-        rep['problems'] += preflight(game) if game == 'wc3' else []
-        tool = 'tools/wc3/check_ranked_wc3.py' if game == 'wc3' else 'tools/bw/check_ranked_bw.py'
+        
+        tool = 'tools/bw/check_ranked_bw.py'
         rc, out = run([sys.executable, tool, mp])
         st, fails = classify(out)
         if rc != 0 and st == 'OK': st = 'FAIL'; fails = [f'{tool} exited {rc}']
@@ -132,31 +113,33 @@ def gate(mp, ranked=False, note=None):
         for p in english_problems(nf)[:5]: rep['problems'].append(p)
     for vs in glob.glob(os.path.join(os.path.dirname(os.path.abspath(mp)), 'Voice_Script*.md')):
         for p in english_problems(vs)[:3]: rep['problems'].append(p)
-    if game == 'wc3':
-        log = tempfile.mkdtemp(prefix='vmf_gate_')
-        env = dict(os.environ, VMF_CHECK_LOG=log)
-        rc, out = run(['bash', 'tools/wc3/run_all_checks.sh', os.path.abspath(mp)], env=env)
-        res = summarise(log)
-        rep['checks'] = res
-        bad = sorted(k for k, v in res.items() if v['status'] in ('FAIL', 'CRASH'))
-        if bad: rep['problems'].append(f'{len(bad)} check(s) FAIL or CRASH: ' + ', '.join(bad))
-        if not res: rep['problems'].append('run_all_checks.sh produced no check outputs: ' + out[-300:])
-        rc, out = run([sys.executable, 'tools/wc3/quality_metrics.py', os.path.abspath(mp), '--json'])
-        try:
-            qm = json.loads(out[out.index('{'):]); rep['quality_metrics'] = qm
-            low = qm.get('below_band', [])
-            if len(low) >= QUALITY_REFUSE_ROWS and not re.search(r'^\s*QUALITY_BAND_OK:\s*\S', text, re.M):
-                rep['problems'].append(f'{len(low)} quality rows below the reference band ({", ".join(low)}); '
-                                       'see docs/quality-bar.md, or explain with QUALITY_BAND_OK: <reason>')
-        except Exception:
-            rep['problems'].append('quality_metrics.py failed: ' + out[-300:])
-    else:
-        rc, out = run([sys.executable, 'tools/bw/predelivery_check.py', os.path.abspath(mp)])
-        fails = [l for l in out.splitlines() if l.startswith('FAIL')]
-        crash = 'Traceback (most recent call last)' in out
-        rep['checks']['predelivery_check'] = {'status': 'CRASH' if crash else 'FAIL' if fails or rc else 'OK', 'fails': fails[:40]}
-        if fails or rc or crash: rep['problems'].append(f'predelivery_check: {len(fails)} FAIL line(s)' + (' and a crash' if crash else ''))
+    rc, out = run([sys.executable, 'tools/bw/predelivery_check.py', os.path.abspath(mp)])
+    fails = [l for l in out.splitlines() if l.startswith('FAIL')]
+    crash = 'Traceback (most recent call last)' in out
+    rep['checks']['predelivery_check'] = {'status': 'CRASH' if crash else 'FAIL' if fails or rc else 'OK', 'fails': fails[:40]}
+    if fails or rc or crash: rep['problems'].append(f'predelivery_check: {len(fails)} FAIL line(s)' + (' and a crash' if crash else ''))
+    rc, out = run([sys.executable, 'tools/bw/quality_metrics.py', os.path.abspath(mp), '--json'])
+    try:
+        qm = json.loads(out[out.index('{'):]); rep['quality_metrics'] = qm
+        low = qm.get('below_band', [])
+        ok = re.search(r'^\s*QUALITY_BAND_OK:\s*(\S.*)$', text, re.M)
+        if ok and 'repository example' in ok.group(1).lower() and os.path.splitext(os.path.basename(mp))[0] not in example_maps():
+            rep['problems'].append('QUALITY_BAND_OK copied from a repository example: only the example missions may use that reason; '
+                                   'build a mission that reaches the band (docs/quality-bar.md) or give your own reason')
+        elif len(low) >= QUALITY_REFUSE_ROWS and not ok:
+            rep['problems'].append(f'{len(low)} quality rows below the reference band ({", ".join(low)}); '
+                                   'see docs/quality-bar.md, or explain with QUALITY_BAND_OK: <reason>')
+    except Exception:
+        rep['problems'].append('quality_metrics.py failed: ' + out[-300:])
     return rep
+
+
+def example_maps():
+    """map names of the repository examples (tools/bw/example_mission.py, tools/bw/examples/ex_*.py)"""
+    names = {'Example_Mission'}
+    for f in glob.glob(os.path.join(ROOT, 'tools', 'bw', 'examples', 'ex_*.py')):
+        names.add('Ex_' + '_'.join(w.capitalize() for w in os.path.basename(f)[3:-3].split('_')))
+    return names
 
 
 def provenance(mp, rep):
@@ -167,7 +150,7 @@ def provenance(mp, rep):
     if rc: rep['problems'].append('provenance: ' + '; '.join(l for l in lines if l.startswith('FAIL'))[:400]
                                   or 'provenance verify failed: ' + out[-300:])
     try:
-        sys.path.insert(0, os.path.join(ROOT, 'tools', 'lib')); import vmf_provenance as P
+        sys.path.insert(0, os.path.join(ROOT, 'tools', 'lib')); import forge_provenance as P
         rec, _, loc = P.read_map(mp)
         if rec: rep['provenance'] = dict(P.summarize(rec)['summary'], stored_in=loc, record_id=rec.get('record_id'))
     except Exception as e: rep['provenance_error'] = repr(e)

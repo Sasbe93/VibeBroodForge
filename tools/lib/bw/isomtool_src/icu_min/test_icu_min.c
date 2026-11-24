@@ -1,5 +1,5 @@
 /* Known-answer tests for icu_min.c (expected values produced by ICU 76). Build: see ../CMakeLists.txt (ctest)
-   or  cc -I. test_icu_min.c icu_min.c -o test_icu_min && ./test_icu_min   Part of VibeModForge (MIT). */
+   or  cc -I. test_icu_min.c icu_min.c -o test_icu_min && ./test_icu_min   Part of VibeBroodForge (MIT). */
 #include "unicode/ustring.h"
 #include <stdio.h>
 #include <string.h>
