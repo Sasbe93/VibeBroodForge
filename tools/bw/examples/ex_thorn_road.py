@@ -84,7 +84,7 @@ m.unit(STARTLOC, CX*32+64, CY*32+48, P2, pixel=True)
 m.loc('Dominion Hall', CX-1, CY-1, CX+5, CY+4)
 # the listening post north of the road: Academy (cannot lift) and a bunker; while it stands the ridge ambush comes
 LX, LY = 62, 30
-TT.put(ACADEMY, LX, LY, 3); TT.put(BUNKER, LX+5, LY+3, 3); TT.put(TURRET, LX-3, LY+3, 3)
+TT.put(ACADEMY, LX, LY, 3); TT.put(BUNKER, LX+5, LY+3, 3); TT.put(TURRET, LX-3, LY+3, 3); TT.put(TURRET, LX+3, LY-3, 3)   # two turrets: no striking spot for a Scout raid (objective_shortcuts)
 K.scatter(m, g, MARINE, 3, LX+3, LY+6, P2, 1.0)
 m.loc('Listening Post', LX-5, LY-3, LX+8, LY+7)
 # road guards

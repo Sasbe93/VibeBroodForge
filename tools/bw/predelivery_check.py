@@ -108,6 +108,20 @@ Robustness: a crashing sub-check is a FAIL with its error and the remaining chec
 54 tech_restriction (check_tech_restriction.py, data/bw/tech/bw_tech_tiers.json): design note 'TECH_LEVEL:
    <early|mid|late|full> :: <chapter> :: <what and why>'; FAIL when nothing is restricted and the level is not full,
    early with top-tier or most middle-tier tech, mid with the whole top tier (generator: missionkit.tech_level)
+   (check 48 also FAILs a Run AI Script id that Brood War does not have: ai_script_valid, data/bw/aiscripts.json;
+   check 52 also covers destroy objectives against the player's flyers; check 24 covers rescued/given units)
+55-57 opening review (opening_review.py): enemy_near_start (no armed enemy within 8 tiles of the start base at
+   second 0, ENEMY_NEAR_START_OK), rescue_under_fire (no rescuable beside hostile armed enemies, RESCUE_FIGHT_OK),
+   quest_idle (no objective fires in an idle trigger simulation, QUEST_IDLE_OK)
+58 wave_variety (check_wave_variety.py): 5+ waves need 3+ distinct compositions and escalation (WAVE_VARIETY_OK);
+   spawn_source: waves must not appear out of nowhere within 30 tiles of the player's start units (no enemy building
+   within 8 tiles, no drop ship/overlord/shuttle in the wave; SPAWN_SOURCE_OK)
+59 check_gaming (check_check_gaming.py): concrete exception reasons, INCOME_OK never in a quest trigger, timed
+   triggers do not order the player's own units (SCRIPTED_PLAYER_ORDER_OK)
+60 post_victory (opening_review.py): triggers that can only run after the hard victory of the idle simulation are
+   dead content; FAIL when they create enemy units (waves), WARN otherwise. Dead triggers are also left out of
+   wave_variety, quality_metrics, path_tool waves and objective_paths, so they cannot inflate a metric
+   (check 52 also FAILs a defeat on 'Command(P1, <liftable building>) == 0' anywhere with ground-only waves: lift off)
 """
 DBG=0
 import sys,os,struct,json,re,subprocess,tempfile
@@ -337,24 +351,28 @@ def run(path,R=None):
         if not r1 or not r2: return False
         a1=max(1,(r1[2]-r1[0])*(r1[3]-r1[1])); a2=max(1,(r2[2]-r2[0])*(r2[3]-r2[1]))
         return r1[0]<r2[2] and r2[0]<r1[2] and r1[1]<r2[3] and r2[1]<r1[3] and a2<=4*a1
-    blind=[]
+    blind=[]; HUMP={p for p in range(8) if ownr[p]==6}
     for c,a2,_ in trigs:
         t0=etof(c); timer=any(x[15]==1 for x in c)
         if (t0 is None or t0<60) and not timer: continue
         for x in a2:
             if x[26]!=10: continue
             cl=struct.unpack_from('<I',x,0)[0]
-            near=[a3 for c3,a3,_ in trigs if (c3==c) or (t0 is not None and etof(c3) is not None and t0-2<=etof(c3)<=t0+10)]
+            # an Order of the HUMAN player's own units is no scene effect: t1031 added 'Order(P1 Zealot -> front)' to six
+            # timed camera triggers only to satisfy this check (and so took the player's army out of their hands)
+            def _real(a3,pl3):
+                return [y for y in a3 if not (y[26]==46 and (struct.unpack_from('<I',y,16)[0] in HUMP or (struct.unpack_from('<I',y,16)[0]==13 and set(pl3)&HUMP)))]
+            near=[_real(a3,pl3) for c3,a3,pl3 in trigs if (c3==c) or (t0 is not None and etof(c3) is not None and t0-2<=etof(c3)<=t0+10)]
             # follow switches this trigger sets (sclib moves enemy spawns into staggered triggers gated on a switch)
             sws={struct.unpack_from('<I',y,20)[0] for y in a2 if y[26]==13 and y[27]==4}
-            near+=[a3 for c3,a3,_ in trigs if any(z[15]==11 and z[14]==2 and z[16] in sws for z in c3)]
+            near+=[_real(a3,pl3) for c3,a3,pl3 in trigs if any(z[15]==11 and z[14]==2 and z[16] in sws for z in c3)]
             # a discovery (new objective + ping on the spot) shows pre-placed things, no scripted effect needed
             disc=any(y[26]==28 and ovl(cl,struct.unpack_from('<I',y,0)[0]) for y in a2) and any(y[26]==9 and 'NEW' in st(struct.unpack_from('<I',y,4)[0]) for y in a2)
             if not disc and not any(y[26] in FX and struct.unpack_from('<H',y,24)[0]!=101 and ovl(cl,struct.unpack_from('<I',y,0)[0]) for a3 in near for y in a3):
                 blind.append(f"ET{t0} {locname(cl)}")
                 if DBG: print("blind",t0,locname(cl),loc(cl),[(y[26],struct.unpack_from("<H",y,24)[0],locname(struct.unpack_from("<I",y,0)[0]),loc(struct.unpack_from("<I",y,0)[0])) for a3 in near for y in a3 if y[26] in FX][:6])
             elif DBG: print("cam",t0,locname(cl),[(y[26],locname(struct.unpack_from("<I",y,0)[0])) for a3 in near for y in a3 if y[26] in FX and struct.unpack_from("<H",y,24)[0]!=101 and ovl(cl,struct.unpack_from("<I",y,0)[0])][:4])
-    res(not blind,f'event cameras show a scripted effect at that spot (spawn/kill/damage/order/give nearby) {sorted(set(blind)) or ""}')
+    res(not blind,f'event cameras show a scripted effect at that spot (spawn/kill/damage/order of non-player units/give nearby) {sorted(set(blind)) or ""}')
     # 14: heroes the player gains mid-mission come via a Rescuable player (rescue colour + standard BW rescue)
     HER={10,16,17,19,20,21,22,23,25,27,28,29,48,49,51,52,53,54,75,76,77,78,79,86,87,88,98,99,100}|set(range(191,200))
     OW=S.get('OWNR',b'\0'*12)
@@ -530,7 +548,7 @@ def run(path,R=None):
     # 24 core abilities of available units
     import core_tech
     _ct=_guard(R,'24 core abilities',lambda: core_tech.check(S),[])
-    res(not _ct,f'core abilities of available units enabled/researchable {_ct or ""}')
+    res(not _ct,f'core abilities of available units (and of rescued, given or created ones) enabled/researchable {_ct or ""}')
     # 25 gas building without town hall
     gok=[]; gf=os.path.splitext(path)[0]+'.gas_ok.json'
     if os.path.exists(gf): gok=json.load(open(gf)).get('sites',[])
@@ -662,6 +680,12 @@ def run_safe(path):
     R+=_guard(R,'53 enemy base pressure',lambda: check_enemy_base_pressure.run(path),[])
     import check_tech_restriction
     R+=_guard(R,'54 tech restriction',lambda: check_tech_restriction.run(path),[])
+    import opening_review
+    R+=_guard(R,'55-57 opening review',lambda: opening_review.run(path),[])
+    import check_wave_variety
+    R+=_guard(R,'58 wave variety',lambda: check_wave_variety.run(path),[])
+    import check_check_gaming
+    R+=_guard(R,'59 check gaming',lambda: check_check_gaming.run(path),[])
     return R
 if __name__=='__main__':
     rc=0

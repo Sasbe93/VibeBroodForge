@@ -6,7 +6,8 @@ War content. This file is the single entry point; `CLAUDE.md`, `GEMINI.md`,
 as your workspace (agents read this file from the workspace root), and run every tool from the repository root.
 
 ## Mandatory for every map, mission or campaign
-1. **Read before you build:** this file, `docs/lessons.md` (how agents got maps wrong before), `docs/quality-bar.md`
+1. **Read before you build:** this file, `docs/lessons.md` (how agents got maps wrong before), `docs/bw-mission-rules.md`
+   (rule index: which rules a check enforces and which are judgement), `docs/quality-bar.md`
    (what delivery quality means and what the tools cannot judge), then the guides for your task below.
 2. **Plan before you build:** campaign outline, then a design note from `templates/Design_Note_template.md` next to
    the map (`Design_Note_<map>.md`), with every line the template marks as required. The design note is part of
@@ -14,22 +15,42 @@ as your workspace (agents read this file from the workspace root), and run every
 3. **Build with the repository's builders** (`tools/lib/bw/sclib.py` + `missionkit.py`). The examples show the
    pipeline only; your mission needs its own terrain, scenes, enemies, story and code, as rich as the plan
    (`docs/quality-bar.md`).
-4. **Gate:** `python3 tools/deliver.py output/<map>.scx` runs every check, the design-note completeness test and the
+4. **Gate** (needs the self-review of step 6): `python3 tools/deliver.py output/<map>.scx` runs every check, the design-note completeness test and the
    quality metrics (`tools/bw/quality_metrics.py`), and packs `output/delivery/<map>_delivery.zip` only when all pass.
    **Deliver only that ZIP.** If the gate refuses, fix the map and run it again. Never deliver around the gate, never
    call a FAIL "known" or "existing", never edit a check to make your map pass, never copy the examples'
    `QUALITY_BAND_OK:` line.
-5. **Report honestly:** say what was tested only statically or in simulation and what was not tested in-game.
-6. **Feedback goes into the repository** (see "Feedback" below), not only into your own memory.
-7. **Provenance record (`docs/provenance.md`):** before you build, log every user prompt that changes a map or
+5. **Play the opening:** `python3 tools/bw/opening_review.py output/<map>.scx --timeline` replays the first minutes
+   in the trigger simulator with nobody moving and lists what fires when. Read it as the player: no enemies inside
+   the start base at second 0, no rescuable beside hostile guards, no quest that is already done before it is
+   announced, a sensible order of objectives, dialogue and waves. The gate runs it and packs `OPENING_REVIEW.txt`.
+6. **Self-review:** fill `templates/Self_Review_template.md` as `Self_Review_<map>.md` next to the map: what the player
+   sees at second 0, the cheapest path to every objective with every ability the player has, what happens after
+   victory and defeat, every difficulty, each scripted mechanic per instance, softlocks, exceptions, what was not
+   tested in game. Concrete names, places and times of this map; `tools/deliver.py` refuses a missing, unanswered,
+   placeholder, generic or copied self-review.
+7. **Independent review (recommended):** let a fresh agent that has not seen your work review the map with
+   `docs/review-prompt.md` (checks, simulation and a manual player-view analysis; ranked faults, gaming signs, tool
+   gaps). Fix what it finds before delivery.
+8. **Report honestly:** say what was tested only statically or in simulation and what was not tested in-game.
+9. **Feedback goes into the repository** (see "Feedback" below), not only into your own memory.
+10. **Provenance record (`docs/provenance.md`):** before you build, log every user prompt that changes a map or
    campaign: `python3 tools/provenance.py add-prompt --map <map> --agent "<Cursor|Grok Bot|Claude Code|Codex|Dots|other:NAME>"
    --agent-version <v> --model <model> --model-version <v> --text-file <prompt.txt>` (`--campaign <folder>` for a
    prompt about a whole campaign folder, `--redact` when a prompt holds personal data). Before changing a map the user
    may have edited in an editor, run `python3 tools/provenance.py check <map> --record` and tell the user that a
    rebuild replaces their editor changes (a backup is kept next to the map). Maps not written by `sclib.Map.save` get
    `python3 tools/provenance.py stamp <map>`. Never switch the record off (`VIBEFORGE_PROVENANCE=0`) for a delivered map.
+   Log the agent and model you really are; if you do not know a version, write `unknown`, never a guess.
 
 ## Never
+- Never deliver an existing map as your result: old test maps, other agents' files, maps found anywhere on the
+  machine, or a repository example. Build from scratch with the builders. The gate refuses test-map titles
+  ('Chapter Test', 'Trigger Test', 'Test Map', the old 'VibeModForge' name), `EXAMPLE:` titles and maps whose
+  provenance record has no build.
+- Never game a check: no exception line (`*_OK:`, `INCOME_OK`) without a concrete reason, no copied triggers or
+  waves to lift a metric, no dummy actions (e.g. ordering the player's own units) to satisfy a pattern. If a check
+  is wrong, fix the check with a fixture and say so (`docs/lessons.md` C9).
 - Never touch the user's PC or game without explicit permission. Before building content with new or changed units,
   heroes, buildings or abilities, ask how it gets tested (README "Ask the user how new content gets tested").
 - Never deliver with a FAIL, and never hide one: say what failed, what was not tested in-game, and why.
@@ -77,8 +98,10 @@ A request for "a mission", "a random mission" or "a map with a story" is a campa
    (`SIDE_OBJECTIVE:` lines). Destroy targets that can morph (Hatchery -> Lair -> Hive, Creep Colony, Spire) count the
    whole chain: `m.target_gone` / `m.target_stands` + `m.T_each` (`docs/bw-campaign-design.md`).
 8. **Checks:** `python3 tools/bw/predelivery_check.py output/<map>.scx` (includes the story/briefing/voice checks,
-   `check_map_design_bw.py`, cliff shape and rewards), plus the placement check and trigger simulation
-   (`tools/bw/placecheck.py`, `tools/bw/trigsim.py`; the example script runs all of them).
+   `check_map_design_bw.py`, cliff shape and rewards, the opening review, wave variety and the anti-gaming
+   check), plus the placement check and trigger simulation (`tools/bw/placecheck.py`, `tools/bw/trigsim.py`; the
+   example script runs all of them).
+8b. **Opening review:** `python3 tools/bw/opening_review.py output/<map>.scx --timeline` (mandatory step 5 above).
 8a. **Quality band:** `python3 tools/bw/quality_metrics.py output/<map>.scx` compares terrain, doodads, ramps,
    triggers, transmissions, briefing voice, spawns and orders with the reference band (`docs/quality-bar.md`). Four or
    more rows below the band refuse the map unless the design note explains why (`QUALITY_BAND_OK:`).

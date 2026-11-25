@@ -19,7 +19,8 @@ Called by predelivery_check.py (checks 36-40). Every sub-check that crashes is r
                       REWARD_WHY: <objective> :: <reward> :: <in-world source the player sees>
                       matching that reward (the amount for resources, a unit name word or a generic group word for units).
                       Sources that only say 'reward', 'bonus' etc. are rejected. Non-quest income (a timed supply drop
-                      that the story explains) is exempt with a Comment action 'INCOME_OK: <reason>' in that trigger.
+                      that the story explains) is exempt with a Comment action 'INCOME_OK: <reason>' in that trigger; INCOME_OK
+                      exempts resource actions only, never units given or created (check 59 refuses it in quest triggers).
 A map counts as a campaign mission if it has Set Mission Objectives, a Transmission, a Victory action or a
 Design_Note with '## Characters'. Melee/ranked maps only get checks 38-40.
 """
@@ -215,11 +216,12 @@ def run(path):
             if not c or types <= {22} or (types <= {22, 12} and all(x[15] != 12 or struct.unpack_from('<I', x, 8)[0] <= 5 for x in c)):
                 continue                                   # start trigger (start resources, starting units)
             comments = ' '.join(STR.get(struct.unpack_from('<I', x, 4)[0], '') for x in a if x[26] == 47)
-            if re.search(r'INCOME_OK\s*:\s*\S{3,}', comments): continue
+            income_ok = bool(re.search(r'INCOME_OK\s*:\s*\S{3,}', comments))   # exempts resources only, never units (t1031)
             event = not types <= {22, 12}
             for x in a:
                 typ, mod = x[26], x[27]; pl = struct.unpack_from('<I', x, 16)[0]; num = struct.unpack_from('<I', x, 20)[0]
                 uid = struct.unpack_from('<H', x, 24)[0]; ow = set(owners)
+                if typ == 26 and income_ok: continue
                 if typ == 26 and mod == 8 and to_human(pl, ow) and num > 0:
                     kind = ('minerals', 'gas', 'minerals and gas')[min(uid, 2)]
                     want = lambda l, num=num: str(num) in re.sub(r'[,.]', '', l[1])

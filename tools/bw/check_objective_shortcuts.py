@@ -29,6 +29,12 @@ Design note:
   SHORTCUT_OK: <objective or location> :: <vector> :: <reason>       (accepts one open vector)
 FAIL: an open vector without SHORTCUT_OK; or an objective with any vector (open or blocked) and no
 OBJECTIVE_SHORTCUTS line. WARN: nydus and cloak vectors (static guess; the enemy AI may build detection or creep).
+Destroy objectives (t1031): a human objective trigger with 'enemy <unit> at most 0' (Command / Bring) FAILs when the
+player can field a flyer that attacks ground (Wraith, Battlecruiser, Mutalisk, Guardian, Scout, Carrier, Arbiter)
+and some striking position around the target is out of reach of every pre-placed anti-air unit or building
+('SHORTCUT_OK: <target> :: air attack :: <reason>' accepts it).
+Lift-off defence (t1036): a human defeat trigger 'Command/Bring <liftable building> at most 0' anywhere FAILs when no
+attack wave brings a flying attacker ('SHORTCUT_OK: <building> :: lift off :: <reason>').
 Static check: it does not play the game; the in-game proof is a playtest that tries the shortcut."""
 import sys,os,math,re,struct
 sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
@@ -134,7 +140,7 @@ def run(path,M=None):
     M._objs=P.detect_objectives(v)
     brings=objective_brings(M)
     if not brings:
-        return ['OK   objective_shortcuts: no Bring-to-location objective for the human player']
+        return ['OK   objective_shortcuts: no Bring-to-location objective for the human player']+destroy_air(M)+liftoff_defend(M)
     lines_sc=note_lines(M.notes,'OBJECTIVE_SHORTCUTS'); lines_ok=note_lines(M.notes,'SHORTCUT_OK')
     aa=aa_threats(v)
     det=[(u['x']/32,u['y']/32) for u in v.U if u['o'] in v.enemy and u['id'] in DETECTORS]
@@ -216,6 +222,120 @@ def run(path,M=None):
         body='; '.join(info) if info else ('no shortcut vector available to the player' if not vectors else '')
         out.append(f"{tag} objective_shortcuts: {head}: {body}"+''.join('\n     - '+f for f in F))
         if warns: out.append('WARN objective_shortcuts: '+head+''.join('\n     - '+w for w in warns))
+    return out+destroy_air(M)+liftoff_defend(M)
+
+# ---- destroy/kill objectives vs air attackers (t1031) ----
+# air-to-ground range in tiles (weapons.dat max range / 32, rounded up) of the flyers that can hit a ground target
+AIR_STRIKERS={8:5,12:6,43:3,44:8,70:4,72:8,71:5}
+# anti-air reach in tiles: range plus about one tile of reaction; anything else with an air weapon counts 5
+AA_REACH={124:8,162:8,144:8,125:7,3:9,65:7,66:7,38:6,0:6,1:7,58:7,60:6,9:6,12:7,47:2,62:7,43:4,8:6,70:5,63:4}
+
+def destroy_targets(M):
+    """human objective triggers whose condition is 'enemy <unit> at most 0' (Command / Bring) and that win or report
+    the objective done -> [(trigger, unit id, enemy players)]"""
+    v=M.v; out=[]
+    def good(a):
+        txt=' '.join(v.st(u32(x,4)) for x in a if x[26] in (7,9,12)).lower()
+        return any(x[26]==1 for x in a) or bool(re.search(r'done|complete|destroyed|accomplished|razed|burn',txt) and not re.search(r'fail|lost|gone',txt))
+    for i,(c,a,own) in enumerate(v.trigs):
+        if not M.human_trig(own): continue
+        sws={u32(x,20) for x in a if x[26]==13 and x[27] in (4,6)}
+        own_txt=' '.join(v.st(u32(x,4)) for x in a if x[26] in (7,9,12)).lower()
+        if re.search(r'fail|lost',own_txt): continue
+        success=good(a) or any(good(a2) for c2,a2,o2 in v.trigs if any(y[15]==11 and y[14]==2 and y[16] in sws for y in c2))
+        if not success: continue                     # 'target gone' that FAILS an objective (or feeds waves) is no destroy objective
+        for x in c:
+            if x[15] in (2,3) and x[14] in (1,10) and u32(x,8)==0 and u16(x,12)<228:
+                pl=set(v.grp(u32(x,4),own))&v.enemy
+                if pl: out.append((i,u16(x,12),pl))
+    seen=set(); uniq=[]
+    for t in out:
+        if (t[1],frozenset(t[2])) in seen: continue
+        seen.add((t[1],frozenset(t[2]))); uniq.append(t)
+    return uniq
+
+def safe_spots(v,tgt,rng,aa):
+    """attack positions at striking range around the target that no pre-placed anti-air reaches"""
+    out=[]
+    for k in range(16):
+        ang=2*math.pi*k/16; x=tgt[0]+math.cos(ang)*rng; y=tgt[1]+math.sin(ang)*rng
+        if not (0<=x<v.W and 0<=y<v.H): continue
+        if all(math.hypot(ax-x,ay-y)>AA_REACH.get(uid,5) for ax,ay,uid,_ in aa): out.append((round(x),round(y)))
+    return out
+
+def liftoff_defend(M):
+    """Review t1036: 'survive, the Command Center must stand' with the defeat 'Command(P1, Command
+    Center) == 0' and waves of ground units only - the player lifts the Command Center over the lava and waits. A
+    defended liftable building (Command Center, Barracks, Factory, Starport, Science Facility, Engineering Bay; not
+    the classic 'Buildings' group) FAILs unless the defeat is a Bring at a location (lifting it away loses) or the
+    waves bring flyers that hit air targets (Mutalisk, Scourge, Wraith, Corsair, Scout, ...). Only when that
+    building is the only defeat condition: another way to lose (a relay not held at zero) still applies while it floats. 'SHORTCUT_OK: <building> :: lift off :: <reason>' accepts it."""
+    v=M.v; out=[]
+    try:
+        import opening_review as _O; _tv,dead=_O.dead_triggers(v.map_path,v)
+    except Exception: dead=set()
+    defended=[]
+    for i,(c,a,own) in enumerate(v.trigs):
+        if not (own&v.hum) or not any(x[26]==2 for x in a): continue
+        for y in c:
+            if y[15] not in (2,3) or u32(y,4) not in v.hum|{13} and not (set(v.grp(u32(y,4),own))&v.hum): continue
+            uid=u16(y,12); cmp_=y[14]; n=u32(y,8)
+            if uid not in LIFT: continue            # 'Buildings' (all of them) is the classic defeat; a named building is the defended object
+            if not ((cmp_==1 and n==0) or (cmp_==10 and n==0)): continue     # at most 0 / exactly 0
+            located=y[15]==3 and not v.whole(u32(y,0))
+            defended.append((i,uid,located))
+    if not defended: return out
+    # other ways to lose (a relay not held at the countdown, a hero dead) still apply while the building floats:
+    # lifting off only wins when the defended building is the mission's only defeat condition
+    dtrig=[i for i,(c,a,own) in enumerate(v.trigs) if own&v.hum and any(x[26]==2 for x in a) and i not in dead]
+    if any(i not in {d[0] for d in defended} for i in dtrig):
+        return [f'OK   objective_shortcuts: lift off: {P.uname(defended[0][1])} is not the only defeat condition (lifting it away does not win)']
+    air=set()
+    for i,(c,a,own) in enumerate(v.trigs):
+        if i in dead: continue
+        for x in a:
+            if x[26]==44 and set(v.grp(u32(x,16),own))&v.enemy and u16(x,24) in FLYERS and (P.DB['units'].get(str(u16(x,24))) or {}).get('air'):   # a lifted building is an air target
+                air.add(u16(x,24))
+    okl=note_lines(M.notes,'SHORTCUT_OK')
+    for i,uid,located in defended:
+        name=P.uname(uid)
+        if located: out.append(f'OK   objective_shortcuts: lift off: defeat trigger {i} needs {name} at a location (lifting it away loses)'); continue
+        if air: out.append(f"OK   objective_shortcuts: lift off: the waves bring flying attackers ({', '.join(P.uname(u) for u in sorted(air))}) against a lifted {name}"); continue
+        if any('lift' in (l[1] if len(l)>1 else '').lower() and len(l)>=3 and len(l[2].split())>=4 for l in okl):
+            out.append(f'OK   objective_shortcuts: lift off: {name} accepted (SHORTCUT_OK)'); continue
+        out.append(f"FAIL objective_shortcuts: lift off: defeat trigger {i} only counts {name} (anywhere) and no wave brings a flyer that hits air - "
+                   f"the player lifts the {name} out of reach and waits. Make the defeat a Bring at a location, send flyers that hit air, or "
+                   f"accept it with 'SHORTCUT_OK: {name} :: lift off :: <reason>'")
+    return out
+
+def destroy_air(M):
+    """A destroy objective is skipped from the air when the player can field a flyer that hits ground targets and
+    some striking position around the target is out of reach of every pre-placed anti-air unit or building (t1031:
+    Scouts available, the target Command Center attackable from the north with no anti-air in range)."""
+    v=M.v; out=[]
+    tg=destroy_targets(M)
+    if not tg: return out
+    aa=aa_threats(v); oks=note_lines(M.notes,'SHORTCUT_OK')
+    for i,uid,pl in tg:
+        locs=[(u['x']/32,u['y']/32) for u in v.U if u['o'] in pl and u['id']==uid]
+        if not locs: continue
+        p=sorted(v.hum)[0]
+        obt=MM.obtainable(M.S,p,M.placed[p]) if MM.can_produce(M,p) else set(M.placed[p])
+        strikers=[f for f in AIR_STRIKERS if f in obt]
+        name=MM.uname(uid)
+        if not strikers:
+            out.append(f'OK   objective_shortcuts: destroy {name} (trigger {i}): the player has no flyer that attacks ground targets'); continue
+        F=[]
+        for tgt in locs:
+            for f in strikers:
+                sp=safe_spots(v,tgt,AIR_STRIKERS[f],aa)
+                if sp: F.append(f"{MM.uname(f)} (range {AIR_STRIKERS[f]}) can hit the {name} at ({tgt[0]:.0f},{tgt[1]:.0f}) from {sp[0]} with no anti-air in reach ({len(sp)}/16 striking positions open)"); break
+        waived=[l for l in oks if len(l)>2 and l[1].lower().startswith('air') and (name.split()[-1].lower() in l[0].lower() or 'destroy' in l[0].lower())]
+        strk='/'.join(MM.uname(f).split(' ',1)[-1] for f in strikers)
+        if F and waived: out.append(f'OK   objective_shortcuts: destroy {name} (trigger {i}): air attack open, SHORTCUT_OK ({waived[0][-1][:80]})')
+        elif F: out.append(f'FAIL objective_shortcuts: destroy {name} (trigger {i}): the player can field {strk}; the target can be killed from the air without a fight'
+                           +''.join('\n     - '+x for x in F[:4])+f"\n     - cover every side of the target with anti-air (turrets, cannons, spores, Goliaths, Dragoons, Hydralisks), restrict the flyers (TECH_LEVEL), or accept it with 'SHORTCUT_OK: {name} :: air attack :: <reason>'")
+        else: out.append(f'OK   objective_shortcuts: destroy {name} (trigger {i}): every striking position of {strk} is covered by anti-air')
     return out
 
 if __name__=='__main__':

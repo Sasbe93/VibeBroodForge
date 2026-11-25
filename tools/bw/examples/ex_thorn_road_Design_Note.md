@@ -31,7 +31,7 @@ SIDE_OBJECTIVE: Destroy the Terran listening post :: destroy :: info
 MISSION_TYPE: escort :: none :: 1
 
 ## Target duration
-TARGET_DURATION: 18 :: Easy 15 / Hard 23 :: Escort Archivist Telar to the Warp Conduit=10; Archivist Telar must not fall=18; listening post north of the road=4
+TARGET_DURATION: 18 :: Easy 15 / Hard 23 :: Escort Archivist Telar to the Warp Conduit=8; Archivist Telar must not fall=18; listening post north of the road=4
 
 ## Start setup
 START_SETUP: small-base :: the exarch's outpost: Nexus, Gateway, Forge, Cybernetics Core, two Pylons, six Probes, four Zealots and two Dragoons; two minutes to ready the escort before the caravan leaves
@@ -39,7 +39,7 @@ START_SETUP: small-base :: the exarch's outpost: Nexus, Gateway, Forge, Cybernet
 ## Objective paths
 OBJECTIVE_PATHS: Escort Archivist Telar to the Warp Conduit :: Caravan Camp (30,70) - Ford (52,63) - Temple Stair (70,50) - Ridge Foot (86,38) - Ridge Pass (100,26) - Warp Conduit (117,13), about 120 tiles in five legs, several minutes at the archivist's walking speed :: road guards at the ford (44,66) and 38,58, below the temple (66,56), north of the plateau (70,36), at the ridge (90,34) and at the pass (108,20); the siege-tank lookout on the temple plateau (78,45); triggered ambushes at the ford (from 58,72), at the temple stair (from 78,60) and, while the listening post stands, at the ridge foot (from 96,14); the Dominion base's town AI attacks on its own :: the caravan walks on by itself once a leg starts; the player must clear ahead and stay with it when each ambush hits
 OBJECTIVE_PATHS: Archivist Telar must not fall :: the escort route above :: every ambush and guard on the route targets the caravan :: losing the archivist ends the mission
-OBJECTIVE_PATHS: Destroy the Terran listening post north of the road :: home base (12,78) to the post (62,30), about 75 tiles across the river ford :: the ford guards (44,66), a picket at 38,58, a patrol on the north bank (56,44), the post's bunker, turret and three marines :: a detour away from the caravan while it is on the move, but it cancels the ridge ambush
+OBJECTIVE_PATHS: Destroy the Terran listening post north of the road :: home base (12,78) to the post (62,30), about 75 tiles across the river ford :: the ford guards (44,66), a picket at 38,58, a patrol on the north bank (56,44), the post's bunker, two missile turrets and three marines :: a detour away from the caravan while it is on the move, but it cancels the ridge ambush
 
 ## Escort route
 ESCORT_ROUTE: Archivist Telar and his bearers :: about 120 tiles in five legs, roughly four to five minutes of walking :: guards at 44,66 / 66,56 / 90,34 / 108,20 (plus pickets at 38,58 and 70,36 and a patrol at 56,44), the plateau lookout at 78,45, ambushes from 58,72 / 78,60 / 96,14 :: clear the road ahead of each leg and protect the caravan when the ambushes hit; optionally destroy the listening post first to cancel the ridge ambush

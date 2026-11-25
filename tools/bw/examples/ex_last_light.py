@@ -8,7 +8,7 @@ start, enemy, story and rewards.
 
 What it demonstrates
   start       established (a mining station held for months): START_SETUP established + START_DEFENSE_WHY for the bunkers
-  objective   survive until the evacuation fleet arrives: a visible countdown, victory at 0, defeat if the Command Center falls
+  objective   survive until the evacuation fleet arrives: a visible countdown, victory at 0, defeat if no Command Center stands in the station
   paths       waves from three directions (north valley, east pass, south sand caves), each direction three or more times
               within the timer; every direction is fed by a real producing hive cluster and stops when it falls
   enemy       one Zerg brood with a main and an expansion, both running their town AI from the first second
@@ -91,7 +91,7 @@ g = K.Grid(m)
 
 # ---------------- locations ----------------
 m.loc('Station', HX-6, HY-10, HX+22, HY+14)
-K.free_loc(m, g, 'North Gate', NX+1, NY+18, 3, 6)
+K.free_loc(m, g, 'North Gate', NX-1, NY+13, 3, 6)   # at the mouth of the hive, beside its sunkens: waves come from somewhere
 K.free_loc(m, g, 'East Pass', EX-12, EY+8, 3, 6)
 K.free_loc(m, g, 'Sand Caves', 34, 88, 3, 6)
 K.free_loc(m, g, 'Station Front N', HX+3, HY-18, 3, 6)
@@ -138,10 +138,11 @@ K.waves(m, P2, [190, 400, 610, 820], L('East Pass'), L('Station'), grp('e'), alt
 K.waves(m, P2, [330, 560, 760], L('Sand Caves'), L('Station'), lambda i: [(ZERGLING, 4), (ZERGLING, 4)] + ([(HYDRA, 3)] if i else []), alts=EAST, switch0=140)
 # mid-way morale line (pure story, no objective change)
 m.T([P1], [m.ET(450)], CAST.say([(KELL, "[emotion: weary] Halfway. (0.4) Seven and a half minutes, people. Count them with me.")], L('Station')))
-# victory at countdown 0, defeat when the Command Center falls (Command counts it anywhere: a lifted CC still counts)
+# victory at countdown 0, defeat when no Command Center stands in the station (Bring at 'Station': a Command Center
+# lifted out of the station counts as lost, so lifting off and waiting is no way out)
 m.T([P1], [m.cond(1, qty=0, cmp=10, flags=0)],
     [m.obj(OBJ.replace('(15 minutes).', '(15 minutes). - done'))] + CAST.say([(ODU, "[emotion: relieved; pace: slow] Fleet on the pad. (0.3) Everybody *up*, now!")], L('Station')) + [m.act(1, flags=0x04)])
-m.T([P1], [m.cond(2, player=P1, qty=0, unit=CC, cmp=10)], [m.text('\x06The Command Center has fallen. The fleet has nowhere to dock.'), m.wait(2000), m.act(2, flags=0x04)])
+m.T([P1], [m.cond(3, loc=L('Station'), player=P1, qty=0, unit=CC, cmp=10)], [m.text('\x06The Command Center has fallen. The fleet has nowhere to dock.'), m.wait(2000), m.act(2, flags=0x04)])
 
 import trigsim
 exlib.finish(m, SLUG, NAME, 'EXAMPLE: Last Light', 'Example mission (VibeBroodForge): hold the station until the fleet arrives.',

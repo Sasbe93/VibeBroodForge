@@ -27,12 +27,16 @@ ai_workers_mining (FAIL): every pre-placed worker of a computer player that stan
   SCAI guide 'start_town'; without one, only Area Town locations manage halls); a hall with workers and no managing script leaves them idle. (Project rule: computer workers mine
   from the opening on. Blizzard itself starts some campaign AIs later, on a switch or when the player arrives; for us
   that needs the exemption.)
+ai_script_valid (FAIL): every 'Run AI Script (At Location)' uses a script id that exists in Brood War's aiscript.bin
+  (data/bw/aiscripts.json, the list StarEdit/ScmDraft offer). An invented id (e.g. 'TAIM') is silently ignored by the
+  game: the computer player never starts, its workers stand idle and it never attacks. No exemption.
 Exemption (design note next to the map): 'AI_IDLE_OK: P<n> :: <hall x,y or "all"> :: reason' (deliberately inactive
 outpost, e.g. a station the player must capture intact)."""
 import sys,os,struct,json,glob,math,re
 HERE=os.path.dirname(os.path.abspath(__file__)); ROOT=os.path.dirname(os.path.dirname(HERE))
 HALLS={106,130,131,132,133,154}; WORKERS={7,41,64}; MINERALS={176,177,178}; STARTLOC=214
 HELPER={'Suic','SuiR','Rscu','MvTe','ClrC','Enmy','Ally','VluA','EnBk','StTg','StPt','EnTr','ExTr','NuHe','HaHe','JYDg','DWHe','ReHe','PB3F'}
+VALID=set(json.load(open(os.path.join(ROOT,'data','bw','aiscripts.json')))['scripts'])
 def is_area(sc): return sc[1:3]=='AR'
 def sections(chk):
     S={};i=0
@@ -68,7 +72,7 @@ def run(path):
             if ct==12 and c[14] in (0,10) and qty<=2: continue
             return False
         return True
-    scripts={p:[] for p in comp}; foreign=[]
+    scripts={p:[] for p in comp}; foreign=[]; invalid=[]
     for k in range(0,len(T)-len(T)%2400,2400):
         t=T[k:k+2400]; conds=[t[c*20:c*20+20] for c in range(16) if t[c*20+15]]
         if any(t[c*20+19]&2 for c in range(16) if t[c*20+15]): pass   # disabled conditions are ignored like StarCraft does
@@ -76,6 +80,8 @@ def run(path):
             x=t[320+a*32:352+a*32]
             if x[26] not in (15,16) or x[28]&2: continue
             sc=x[20:24].decode('latin1','replace')
+            if sc not in VALID:
+                invalid.append(f'trigger #{k//2400}: {sc!r} is not a Brood War AI script id (the game ignores it; use e.g. TMCx/ZMCx/PMCx, a campaign script or TARx/ZARx/PARx)'); continue
             if sc in HELPER or sc[1:3]=='Vi': continue
             L=loc(struct.unpack_from('<I',x,0)[0]) if x[26]==16 else None
             owners=[p for p in range(8) if runs_for(t,p)]
@@ -139,7 +145,8 @@ def run(path):
             idle[key]=idle.get(key,0)+1
         if idle: W.append(f'P{p+1}: '+', '.join(f'{n} worker(s) at hall {k}' if k!='no hall within 12 tiles' else f'{n} worker(s) with no hall within 12 tiles' for k,n in idle.items())+' not managed by a town AI started at mission start')
         info.append(f'P{p+1} '+('/'.join(sorted({s["sc"] for s in start})) or 'no AI'))
-    R=[('FAIL ' if F else 'OK   ')+'computer_ai_started: every computer base runs its town AI from mission start, at a location on its town hall, with a start location ('+', '.join(info)+')'+''.join('\n     - '+x for x in F[:10])]
+    R=[('FAIL ' if invalid else 'OK   ')+'ai_script_valid: every Run AI Script id exists in Brood War (data/bw/aiscripts.json)'+''.join('\n     - '+x for x in invalid[:10])]
+    R+=[('FAIL ' if F else 'OK   ')+'computer_ai_started: every computer base runs its town AI from mission start, at a location on its town hall, with a start location ('+', '.join(info)+')'+''.join('\n     - '+x for x in F[:10])]
     R.append(('FAIL ' if W else 'OK   ')+'ai_workers_mining: pre-placed computer workers belong to a managed town hall with minerals (they mine from the start)'+''.join('\n     - '+x for x in W[:10]))
     return R
 if __name__=='__main__':

@@ -204,7 +204,10 @@ def objective_texts(v):
             for line in parts or [raw]:
                 t=re.sub(r'(?i)^\s*(?:[-*]|optional\s*:)\s*','',line).strip()
                 t=re.sub(r'(?i)^\s*optional\s*:\s*','',t).strip()
-                t=re.sub(r'\s*-\s*(done|failed)\s*$','',t,flags=re.I).strip()
+                # status marks can sit anywhere, e.g. 'Survive ... (12 minutes). - done The Command Center must stand.'
+                # (review t1036: parsed as a second objective)
+                t=re.sub(r'\s*-\s*(done|failed|completed?)\b\.?','',t,flags=re.I)
+                t=re.sub(r'\s{2,}',' ',t).strip()
                 t=re.sub(r'(?i)^objectives?\s*:\s*','',t).strip()
                 if not t or re.match(r'^(objectives?|optional)\s*:?\s*$',t,re.I): continue
                 key=t.lower()
@@ -273,7 +276,11 @@ def detect_objectives(v):
                 unit=_unit_in_text(text)
             spots=[(u['x']/32,u['y']/32,u['id']) for u in v.U if u['o'] in v.rescue|v.hum and u['id'] not in WORKERS|HALLS|{SLOC,109,110,111,106} and u['id']<106]
             if unit is not None:
-                spots=[p for p in spots if p[2]==unit] or [(u['x']/32,u['y']/32,u['id']) for u in v.U if u['id']==unit]
+                # a rescuable unit of that type first; never the player's own start unit (t1031: the analyser
+                # took the player's start Probe beside the Nexus as the 'cached probe' and measured a 2-tile rescue)
+                cand=[u for u in v.U if u['id']==unit]
+                cand.sort(key=lambda u: (u['o'] not in v.rescue, u['o'] in v.hum and math.hypot(u['x']/32-v.start[0],u['y']/32-v.start[1])<=8))
+                spots=[p for p in spots if p[2]==unit and not any(c['o'] in v.rescue for c in cand)] or [(u['x']/32,u['y']/32,u['id']) for u in cand]
             if not spots:
                 # any rescuable mobile unit
                 spots=[(u['x']/32,u['y']/32,u['id']) for u in v.U if u['o'] in v.rescue and u['id']<106]
@@ -380,7 +387,11 @@ def detect_waves(v):
         for x in a:
             if x[26]==13 and x[27]==4: switch_t[u32(x,20)]=t0
     waves=[]
-    for c,a,own in v.trigs:
+    try:                                    # triggers that can only run after a hard victory are dead (review t1036)
+        import opening_review as _O; _tv,_dead=_O.dead_triggers(v.map_path,v)
+    except Exception: _dead=set()
+    for ti,(c,a,own) in enumerate(v.trigs):
+        if ti in _dead: continue
         if not any(x[26] in (44,45) and any(p in v.enemy for p in v.grp(u32(x,16),own)) for x in a): continue
         if not any(x[26]==46 and any(p in v.enemy for p in v.grp(u32(x,16),own)) for x in a): continue
         # spawn time

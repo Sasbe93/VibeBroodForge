@@ -76,6 +76,31 @@ for p in ('README.md', 'AGENTS.md', 'tools/README.md'):
     t = read(p) or ''
     need(not re.search(r'tools/wc3/|docs/wc3-|data/wc3/|\.w3x\b', t), f'{p} names a Warcraft III path (this repository is Brood War only)')
 
+# t1034: opening review, foreign maps, anti-gaming wired up
+need('tools/bw/opening_review.py' in dsrc, 'the gate no longer runs tools/bw/opening_review.py')
+pre = read('tools/bw/predelivery_check.py') or ''
+for mod in ('opening_review', 'check_wave_variety', 'check_check_gaming'):
+    need(f'import {mod}' in pre and os.path.isfile(os.path.join(ROOT, 'tools', 'bw', mod + '.py')), f'predelivery_check.py does not run {mod}')
+if agents:
+    for must in ('opening_review.py', 'Never deliver an existing map', 'Never game a check'):
+        need(must in agents, f'AGENTS.md no longer says {must!r}')
+for t, want in [('Old Campaign - Chapter Test (Main Run)', True), ('Trigger Test: Outpost', True), ('VibeModForge test', True),
+                ('Canopy Vein', False), ('The Testament of Ash', False)]:
+    need(bool(deliver.TEST_TITLE.search(t)) == want, f'deliver.TEST_TITLE on {t!r} should be {want}')
+need(os.path.isfile(os.path.join(ROOT, 'data', 'bw', 'aiscripts.json')), 'data/bw/aiscripts.json (valid AI script ids) missing')
+
+
+# self-review, exceptions, review prompt, rules index (t1034 follow-up)
+for f in ('templates/Self_Review_template.md', 'tools/lib/self_review.py', 'docs/review-prompt.md', 'docs/bw-mission-rules.md', 'tools/selftest_self_review.py'):
+    need(os.path.isfile(os.path.join(ROOT, f)), f + ' is missing')
+_dv = read('tools/deliver.py') or ''
+need('self_review(mp, rep' in _dv and 'exceptions(text, rep)' in _dv, 'tools/deliver.py no longer runs the self-review and the exception list')
+_r = {'problems': []}; deliver.exceptions('SHORTCUT_OK: North Relay :: lift-off :: <reason>\nWAVE_VARIETY_OK: the siege waves are identical on purpose because the story says so\n', _r)
+need(len(_r['problems']) == 1 and len(_r['exceptions']) == 2, 'deliver.exceptions does not list both lines and refuse only the placeholder')
+_ag = read('AGENTS.md') or ''
+for must in ('Self-review', 'docs/review-prompt.md', 'docs/bw-mission-rules.md'):
+    need(must in _ag, f'AGENTS.md lost {must!r}')
+
 for e in E: print('FAIL', e)
 print('SELFTEST PASS' if not E else f'SELFTEST FAIL ({len(E)})')
 sys.exit(1 if E else 0)

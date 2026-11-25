@@ -20,6 +20,9 @@ rules, not a missing TARGET_DURATION or OBJECTIVE_PATHS line):
     is at least about a third of the objective's budget
   5 the main objective cannot be finished before the first path encounter or scripted wave (a walk to
     victory over empty ground while the first wave is still minutes away is a FAIL)
+  6 encounters are counted once: a threat cluster on the way out and on the way back is one encounter
+  7 a rescue, reach, escort or destroy target is at least 12 tiles from the player start (t1031: a 'rescue' 2 tiles
+    from the Nexus)
 Escort routes are also covered here (and in more detail by escort_route_challenge, check 46).
 WARN: no routes PNG (*routes*.png) next to the map."""
 import sys,os,re,glob,math
@@ -33,15 +36,26 @@ def line_matches(line, obj):
     return D.line_matches(head, obj)
 
 def path_encounters(o):
+    """distinct threat clusters on the objective's own routes. A cluster that lies on both the way out and the way
+    back (or on two legs) counts once (t1031: one Marine group beside a 2-tile rescue was counted on the way there
+    and on the way back, and the rescue passed the two-encounter baseline)."""
     typ=o.get('type')
-    kinds=('start_to_target','return') if typ=='rescue' else ('start_to_target','escort','return')
-    n=0
+    groups=[]
     for item,enc in zip(o.get('paths') or [], o.get('encounters') or []):
-        if item[0] in kinds or typ not in ('rescue','reach','escort'):
-            n+=len(enc)
-    if typ in ('rescue','reach','escort'):
-        n=sum(len(e) for item,e in zip(o.get('paths') or [], o.get('encounters') or []) if item[0] in ('start_to_target','return','escort'))
-    return n
+        if typ in ('rescue','reach','escort') and item[0] not in ('start_to_target','return','escort'): continue
+        for idx,labels in enc:
+            ls=set(labels)
+            # the same cluster again: at least half of the smaller cluster's threats were already met
+            if any(len(g&ls)*2>=min(len(g),len(ls)) for g in groups): continue
+            groups.append(ls)
+    return len(groups)
+
+SHORT_TILES=12   # an objective target closer than this to the start is no trip at all
+
+def short_paths(o):
+    """start_to_target paths shorter than SHORT_TILES for objectives that are meant to be a trip"""
+    if o.get('type') not in ('rescue','reach','escort','destroy','conquest'): return []
+    return [item[5] for item in o.get('paths') or [] if item[0]=='start_to_target' and item[5]!=math.inf and item[5]<SHORT_TILES]
 
 def walk_sec(o):
     t=0.0
@@ -97,6 +111,9 @@ def run(path):
             F.append(f"design note lacks 'OBJECTIVE_PATHS: {name} :: <path(s) with length in tiles/travel time> :: <threats / waves and directions> :: <why it is a challenge>'")
         if duration and not duration.get('incomplete') and budget is None:
             F.append(f"TARGET_DURATION does not give a time budget for '{name}'")
+        sp=short_paths(o)
+        if sp and not easy:
+            F.append(f"'{name}': the target is only {min(sp):.0f} tiles from the player start (trivially short, minimum {SHORT_TILES}); move it away or make it no objective")
         if typ in D.PATH_TYPES and not easy and nenc<D.RESCUE_MIN_ENCOUNTERS:
             F.append(f"{typ} path for '{name}' has {nenc} threat encounter(s) (need at least {D.RESCUE_MIN_ENCOUNTERS}: ambushes, chokes held by enemies, patrols, base range, triggered attacks along the way)")
         judged=typ not in ('survive','other') or bool(paths)   # survive is judged by its waves; an untraced 'other' line (defeat condition, ability use) has no path to count

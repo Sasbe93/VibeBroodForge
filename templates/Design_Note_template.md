@@ -73,7 +73,8 @@ For each reach, rescue, capture or escort objective: which of the player's units
 the guarded path (lift-off, flyers, drops, Recall, Nydus Canal, cloak, burrow,
 building next to the target), and how the mission blocks each one, or why skipping is fine.
 OBJECTIVE_SHORTCUTS: <objective|location> :: <vectors the player has> :: <how each one is blocked>
-SHORTCUT_OK: <objective|location> :: <vector> :: <why it is fine>      (only for an accepted shortcut)
+SHORTCUT_OK: <objective|location> :: <vector> :: <why it is fine>      (only for an accepted shortcut; a liftable
+             defended building uses the vector 'lift off')
 
 ## Pressure sources
 Which bases or off-map sources feed the waves and the AI. At least two independent sources; one early-reachable base
@@ -128,4 +129,11 @@ PHASES: base, explore, combat, defense, boss
 `python3 tools/deliver.py <map>` refuses this note if a required line or section is missing (TARGET_DURATION,
 OBJECTIVE_PATHS, TECH_LEVEL, ## Characters, MISSION_TYPE, START_SETUP), if it is not English, or if any check FAILs.
 It also runs `tools/bw/quality_metrics.py` and refuses a mission 4 or more rows below the band in docs/quality-bar.md:
+ENEMY_NEAR_START_OK: <reason>     (only when an opening fight in the start base is scripted and winnable)
+RESCUE_FIGHT_OK: <unit or place> :: <reason>     (only when captives are meant to fight their guards and can win)
+QUEST_IDLE_OK: <location or trigger> :: <reason>     (only when an objective is meant to complete without moving)
+WAVE_VARIETY_OK: <reason>     (only when identical waves are the story)
+SCRIPTED_PLAYER_ORDER_OK: <reason>     (only when timed triggers must move the player's units, e.g. inside a cutscene)
+SPAWN_SOURCE_OK: <reason>     (only when waves may appear beside the player with no visible source, e.g. a warp-in)
+Every *_OK line needs a concrete reason of its own (4+ words); placeholders FAIL (check 59). Delete unused lines.
 QUALITY_BAND_OK: <reason>     (only when the map is deliberately below the band, e.g. a short no-base hero mission on a small map)

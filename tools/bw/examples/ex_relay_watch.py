@@ -146,7 +146,7 @@ ALL = [m.SW(1), m.SW(2), m.SW(3)]
 m.T([P1], ALL, CAST.say([(CAL, "[emotion: firm] All three. (0.3) Now we *hold* them until the clock runs out.")], L('Centre Relay')) + [m.setsw(4), m.setsw(9)])
 # waves: every ~100 s, three directions, each at its own relay; north and centre only while the Protoss main stands
 MAIN_UP = [m.cond(3, loc=L('Templar Hall'), player=P2, qty=1, unit=NEXUS, cmp=0)]
-grp = lambda i: [(ZEALOT, 2 + min(2, i//2)), (DRAGOON, 1 + min(3, i//2))]
+grp = lambda i: [(ZEALOT, 2 + min(2, i)), (DRAGOON, 1 + min(3, i))]   # every round of waves is larger (wave_variety)
 K.waves(m, P2, [170, 470, 770, 1070], L('North Gate'), L('North Relay'), grp, extra_conds=MAIN_UP)
 K.waves(m, P2, [270, 570, 870, 1140], L('East Gate'), L('Centre Relay'), grp, extra_conds=MAIN_UP)
 # the south column is the templar's field army marching in from beyond the eastern edge: it does not depend on the

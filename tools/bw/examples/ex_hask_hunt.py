@@ -92,7 +92,7 @@ m.loc('Fallback Bunker', 98, 104, 110, 114)
 TT.put(BUNKER, 100, 102, 3); TT.put(BUNKER, 106, 101, 3); TT.put(TURRET, 104, 112, 3); TT.put(SUPPLY, 108, 108, 3)
 K.scatter(m, g, TANK, 2, 104, 107, P2, 0.8); K.scatter(m, g, MARINE, 4, 101, 106, P2, 1.0)
 # guards on the roads
-for (cx, cy), grp in [((24, 96), [(MARINE, 3)]), ((37, 81), [(FIREBAT, 2), (MARINE, 2)]), ((47, 71), [(MARINE, 3), (MEDIC, 1)]),
+for (cx, cy), grp in [((24, 92), [(MARINE, 3)]), ((37, 81), [(FIREBAT, 2), (MARINE, 2)]), ((47, 71), [(MARINE, 3), (MEDIC, 1)]),
                       ((62, 57), [(VULTURE, 2), (FIREBAT, 2)]), ((36, 112), [(MARINE, 3)]), ((56, 106), [(FIREBAT, 2), (MARINE, 2)]),
                       ((76, 110), [(VULTURE, 2), (MARINE, 2)]), ((88, 104), [(GOLIATH, 1), (MARINE, 3)]), ((18, 74), [(MARINE, 2), (FIREBAT, 1)]),
                       ((22, 54), [(MARINE, 3)])]:

@@ -16,7 +16,7 @@ sand. The evacuation fleet is fifteen minutes out and can only dock at the stati
 
 ## Objectives
 - Required: Survive until the evacuation fleet arrives (15 minutes, visible countdown).
-- Defeat: the Command Center is destroyed.
+- Defeat: no Command Center stands in the station (destroyed or lifted away).
 - No optional objective.
 
 ## Side objectives
@@ -33,7 +33,7 @@ START_SETUP: established :: a mining station held for months: Command Center, tw
 START_DEFENSE_WHY: three bunkers and one missile turret :: the station has been fortified against the brood for weeks; one bunker per approach
 
 ## Objective paths
-OBJECTIVE_PATHS: Survive until the evacuation fleet arrives :: waves from North Gate (62,30) down the valley road, about 35 tiles / 15 s; from East Pass (96,48), about 40 tiles; from the Sand Caves (34,88), about 40 tiles :: north waves every 180 s from t=100 s (5 waves), east every 210 s from t=190 s (4 waves), south every 200-230 s from t=330 s (3 waves); together a wave every 60-90 s from three directions, first pressure at about t=2 min; north and east stop when their hive cluster falls :: three approaches, one bunker each: the player cannot sit in one choke, and has to decide whether to strike a hive cluster to end one direction
+OBJECTIVE_PATHS: Survive until the evacuation fleet arrives :: waves from North Gate (56,27) at the mouth of the north hive, down the valley road, about 40 tiles / 17 s; from East Pass (96,48), about 40 tiles; from the Sand Caves (34,88), about 40 tiles :: north waves every 180 s from t=100 s (5 waves), east every 210 s from t=190 s (4 waves), south every 200-230 s from t=330 s (3 waves); together a wave every 60-90 s from three directions, first pressure at about t=2 min; north and east stop when their hive cluster falls :: three approaches, one bunker each: the player cannot sit in one choke, and has to decide whether to strike a hive cluster to end one direction
 
 OBJECTIVE_PATHS: The Command Center must stand :: the three wave paths above end at the station front (bunkers at 61,46 / 78,58 / 62,76) :: every wave that breaks a bunker line walks straight into the mineral line and the Command Center :: losing one approach is not the end, losing the Command Center is
 
@@ -83,8 +83,9 @@ Twelve scripted waves in fifteen minutes (zerglings and hydralisks, ultralisks f
 of both hive clusters attacks on its own as well. Start resources 600/200.
 
 ## Shortcuts
-A survive objective: there is no place to reach, so lifting or flying gains nothing (check objective_shortcuts finds
-no Bring objective).
+A survive objective: there is no place to reach. The defeat counts the Command Center inside the station (a Bring at
+'Station'), so lifting it off and floating away counts as losing it; the waves are ground-only, which is fine for that
+reason (check objective_shortcuts, lift off).
 
 ## Tech level
 TECH_LEVEL: mid :: stand-alone (middle chapter of a Terran campaign) :: Barracks, Factory and Starport tier (Siege Tanks, Goliaths, Wraiths, Dropships); no Science Facility tier, so no Vessels, Battlecruisers or nukes for the hold

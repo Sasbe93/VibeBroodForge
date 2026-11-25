@@ -44,7 +44,8 @@ def analyze(trigs,ownr):
         sink=F if human else W
         for c in conds:
             u=u16(c,12)
-            if gone(c) and c[15]==3 and u in LIFT:
+            own_side=u32(c,4) in hum or (u32(c,4)==13 and human)
+            if gone(c) and c[15]==3 and u in LIFT and not own_side:   # the player's own building at a location: lifting it away loses (objective_shortcuts lift off)
                 W.append(f"trig{i}: 'exactly 0 {LIFT[u]}' at a location - a Terran building can lift off and leave it without dying (use Command, or Deaths)")
             if u not in CHAIN: continue
             later=CHAIN[u][1:]

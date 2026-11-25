@@ -6,6 +6,9 @@ the band measured on reference missions built with this repository. Below the ba
 map again, not proof of bad quality. A map far below the band in several rows is not delivery quality, and
 tools/deliver.py refuses it unless the design note explains why (QUALITY_BAND_OK: <reason>).
 
+Copied triggers count once (dedupe: same actions apart from switches, waits, comments, locations and strings), and
+a WARN appears when half of the rows or more sit within 10 % of the band minimum (built for the metric).
+
 usage: python3 tools/bw/quality_metrics.py MAP.scx [MAP2.scx ...] [--json]
 Run from the repository root. Needs the tileset files (docs/bw-terrain-setup.md). Read-only: the map is never changed.
 """
@@ -30,7 +33,7 @@ BAND = {
     'spawn_actions':          (100, 160),
     'order_actions':          (80, 106),
 }
-INFO_ONLY = ('doodad_tiles_per_1k', 'placed_doodads', 'elevation_levels', 'walkable_share', 'objective_updates', 'preplaced_units', 'computer_players', 'ai_script_runs', 'map_size')
+INFO_ONLY = ('copied_triggers', 'doodad_tiles_per_1k', 'placed_doodads', 'elevation_levels', 'walkable_share', 'objective_updates', 'preplaced_units', 'computer_players', 'ai_script_runs', 'map_size')
 # trigger action ids (StarEdit): 7 Transmission, 12 Set Mission Objectives, 15/16 Run AI Script (at Location),
 # 44 Create Unit, 46 Order; briefing action ids: 2 Play WAV, 8 Transmission
 A_TRANS, A_OBJ, A_AI, A_AI_LOC, A_CREATE, A_ORDER = 7, 12, 15, 16, 44, 46
@@ -61,10 +64,32 @@ def level_crossings(h, w):
     return sum(1 for s in (nd.sum(ch, lab, range(1, n + 1)) if n else []) if s >= 4)
 
 
+MASKED = {4, 13, 47}       # Wait, Set Switch, Comment: differ between copies without changing what the player sees
+FLOOR_MARGIN = 1.10        # a value within 10 % above the band minimum sits 'on the floor'
+
+
+def dedupe(T):
+    """drop copies: a trigger whose actions (type, unit, player, count; switches, waits, comments and locations
+    ignored; a different text line is a different trigger) repeat an earlier trigger with 3 or more such actions counts once (t1031: 34 copies of one wave
+    trigger lifted the trigger, spawn and order rows to the band floor)"""
+    seen = set(); out = []; copies = 0
+    for c, al, own in T:
+        sig = tuple((a[26], struct.unpack_from('<H', a, 24)[0], struct.unpack_from('<I', a, 16)[0], a[27],
+                     struct.unpack_from('<I', a, 4)[0] if a[26] in (7, 9, 12) else 0) for a in al if a[26] not in MASKED)
+        if len(sig) >= 3 and sig in seen: copies += 1; continue
+        seen.add(sig); out.append((c, al, own))
+    return out, copies
+
+
 def measure(path):
     S = C._sections(path)
     W, H = struct.unpack('<HH', S['DIM '][:4]); tiles = W * H
-    T = C._trigs(S.get('TRIG', b'')); B = C._trigs(S.get('MBRF', b''))
+    T0 = C._trigs(S.get('TRIG', b''))
+    try:                                      # triggers that can only run after a hard victory do not count (review t1036)
+        import opening_review as _O; _tv, _dead = _O.dead_triggers(path)
+        T0 = [t for i, t in enumerate(T0) if i not in _dead]
+    except Exception: pass
+    T, copies = dedupe(T0); B = C._trigs(S.get('MBRF', b''))
     acts = collections.Counter(a[26] for _, al, _ in T for a in al)
     bacts = collections.Counter(a[26] for _, al, _ in B for a in al)
     dd = S.get('DD2 ', b''); ndd = len(dd) // 8
@@ -77,7 +102,7 @@ def measure(path):
     own = S.get('OWNR', b'')
     comps = sum(1 for p in range(min(8, len(own))) if own[p] == 5)
     return {
-        'map': os.path.basename(path), 'tileset': tileset, 'map_size': f'{W}x{H}',
+        'map': os.path.basename(path), 'tileset': tileset, 'map_size': f'{W}x{H}', 'copied_triggers': copies,
         'ground_types_used': gt,
         'doodad_tiles_per_1k': round(1000 * dtiles / tiles, 1),
         'placed_doodads': ndd,
@@ -107,7 +132,12 @@ def report(path, as_json):
     if not as_json:
         for k in INFO_ONLY: print(f'INFO {k:24s} {res[k]:>8}')
     res['below_band'] = low
+    res['on_floor'] = [k for k, (mn, typ) in BAND.items() if mn <= res[k] <= mn * FLOOR_MARGIN]
+    floor_warn = len(res['on_floor']) >= (len(BAND) + 1) // 2
     if as_json: print(json.dumps(res, indent=1)); return res
+    if floor_warn:
+        print(f'WARN on_floor: {len(res["on_floor"])} of {len(BAND)} rows sit within 10 % of the band minimum ({", ".join(res["on_floor"])}): '
+              'a map tuned to the floor of every row is built for the metric, not for the player')
     print(f'RESULT quality_metrics: {len(low)} of {len(BAND)} rows below the reference band'
           + (' - look at the map again; several rows far below the band are not delivery quality' if low else ''))
     return res

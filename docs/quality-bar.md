@@ -46,6 +46,26 @@ playtester judged them too easy and "so-so" in map and mission design. They are 
 references are 0, 0 and 1 rows below, which is why the refusal starts at 4. The example missions are 5 to 8 rows
 below (small on purpose, see above).
 
+## Anti-gaming (how the metrics resist a map built for the numbers)
+A map can be tuned to pass checks without being better for the player. The tools count only what the player meets:
+- **Only triggers reachable before the victory count.** `opening_review.dead_triggers` runs the idle trigger
+  simulation to the hard victory; triggers that can only run later (and switch chains whose setters are all dead) are
+  left out of wave_variety, quality_metrics, the path tool's waves and objective_paths. Check 60 post_victory FAILs
+  dead triggers that create enemy units.
+- **Identical waves count once.** quality_metrics de-duplicates triggers that differ only in a switch number or a
+  copy marker (`dedupe`); wave_variety counts distinct compositions, not wave triggers.
+- **Exceptions need a concrete reason and are listed.** Every `*_OK` line needs 4+ words and no placeholder
+  (check 59 exception_reason; `tools/deliver.py` refuses thin reasons) and the gate lists every exception line in
+  `GATE_REPORT.json`; name them in your report.
+- **Many metrics exactly at the floor is a warning.** When half or more of the band rows sit within 10 % above their
+  minimum, quality_metrics prints `WARN on_floor` and the gate repeats it: a map tuned to the floor of every row is
+  built for the metric.
+- **Self-review and independent review.** `Self_Review_<map>.md` (template `templates/Self_Review_template.md`) must
+  answer every question with concrete names, places and times of the map (`tools/lib/self_review.py`); a fresh agent
+  reviews the map with `docs/review-prompt.md` before delivery.
+Limits: dead-trigger detection relies on the idle simulation's hard victory (a victory that needs player action
+leaves every trigger counted); the floor warning is a prompt, not proof.
+
 ## What the agent must judge (no tool can)
 Before running the gate, look at the minimap PNG and the routes PNG and answer these in the design note's flow
 section. Be honest; "fine" is not an answer.

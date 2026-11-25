@@ -46,6 +46,22 @@ that a human playtester rejected.
   help and staredit.net for triggers and AI scripts, OpenBW for engine behaviour. Mark anything unverified as
   unverified.
 
+- **C9 Never game the checks.** A check measures a property; satisfying its pattern without the property is a
+  hidden FAIL. Seen in a review map built with this repository (t1031): an `INCOME_OK` comment in the rescue-quest
+  trigger hid the quest's unit hand-over from the reward check; six timed camera triggers ordered the player's own
+  Zealots to the front only so the event-camera check saw a "scripted effect" (and so took the army out of the
+  player's hands); 34 copies of one wave trigger lifted the quality metric to its floor. Every exception line needs
+  a concrete reason; copies count once; orders of the player's units are no scene effect (predelivery checks 13, 58,
+  59). If a check is wrong, say so and fix the check with a fixture in the repository; never work around it in the map.
+- **C10 Play the opening before you deliver.** Run `python3 tools/bw/opening_review.py MAP.scx --timeline` and read
+  what the player meets in the first minutes. The t1031 map had 13 enemy Marines and Firebats inside the player's
+  base at second 0, the rescue Probe standing on an enemy Marine, and the player's own start Probe fulfilling the
+  rescue quest at second 0, 120 s before it was announced. All static checks were green on those points.
+- **C11 Only real Brood War ids.** The t1031 map ran the AI script `TAIM`, which does not exist: the enemy never
+  started, its workers stood idle. AI script ids come from `data/bw/aiscripts.json` (game data), never from memory.
+- **C12 The provenance record is honest.** Log the agent and model you really are, with versions. If you do not know
+  your model version, write `unknown`; never guess or copy a model name (t1031 named a model the user had not used).
+
 ## Mission design from the player's view
 - **D1 Judge every objective by its paths and the planned duration** (`TARGET_DURATION:`, `OBJECTIVE_PATHS:`):
   trace start to target, the return, every wave; count encounters against the time budget. A short, empty rescue or
@@ -60,11 +76,42 @@ that a human playtester rejected.
   unrelated deeds; no ranking of reward types, the reward follows from the objective.
 - **D6 An alliance is more than a flag.** List everything an ally has (vision both ways, allied victory, no friendly
   fire, AI behaviour) and attach it to the moment the alliance starts in the story, not to mission start.
+- **D8 Objectives start far from the player and later than second 0.** A rescue, reach or destroy target 2 tiles from
+  the Nexus is no objective; a threat cluster counts once even when the way out and the way back pass it; a Bring
+  condition that the player's start units already meet fires before the quest is announced (checks 51, 57).
+- **D9 Waves vary and grow.** Plan wave compositions per stage (new unit types, more units, other directions);
+  one copied wave for the whole mission is monotonous (check 58).
+- **D10 Rescued and handed-over units keep their kit.** A rescued High Templar with every spell disabled is
+  useless; units the player gains use the player's tech settings (check 24).
+- **D11 Destroy objectives against the player's flyers.** If the player can field a flyer that attacks ground, every
+  side of the target needs anti-air in reach, or the objective is a free air raid (check 52).
+- **D12 Nothing after the victory.** Waves scheduled after the hard victory never play; they only inflate wave counts
+  and metrics (t1036: won at 720 s, 28 triggers later). Check 60 FAILs them and the metrics ignore them.
+- **D13 Defend the place, not a building that can fly.** 'Command Center == 0 anywhere' with ground-only waves is won
+  by lifting off and waiting. Use a Bring at a location or send flying attackers (check 52, lift off).
+- **D14 Waves come from somewhere.** Units created out of nowhere 20 tiles from the base, 39 times, feel like a
+  cheat. Spawn at an enemy building, a gate or a drop ship, 30+ tiles away (spawn_source).
+- **D15 Do not drive the player's army.** Timed triggers that order the player's units every 90 s, or pause the game
+  for dialogue again and again, take the mission away from the player (player_army_hijack, event cameras).
+- **D16 The alliance starts when the story says.** Vision given at mission start because a truce flag was set
+  there showed the ally's area before the pact; attach vision to the trigger of the story's alliance moment.
+- **D17 Computer AI starts on its hall.** A town script run at the centre of a large box beside the base left the
+  workers idle; run it at a location on the town hall from the first second (check 48).
 - **D7 Destroy targets can morph.** A Hatchery that becomes a Lair is not destroyed; count the whole chain
   (`m.target_gone` / `m.target_stands` + `m.T_each`). Side objectives vary; at most one destroy side objective
   per mission.
 
 ## Never copy a previous mission
+- **C13 Run the real tool once.** An "opens in the editor" check was a strict parser of its own and passed while the
+  editor refused the map. Before trusting a static proxy, run the real editor or game against a known-bad and a
+  known-good map.
+- **C14 Check what the game reads, not a proxy.** Add-ons placed beside a building passed a position check while
+  they were not attached; the game reads the unit link. Find the real property in reference maps first.
+- **N0 Never deliver an existing map as your result.** Old test maps, maps of other agents, files found anywhere on
+  the machine, and the repository examples are not your work. Build every mission from scratch with the builders
+  (`sclib.py` + `missionkit.py`). An old instrumented test map (title "Chapter Test (Main Run)") still passed many
+  static checks in a review (t1032), so the checks alone do not catch a foreign map. The gate refuses test-map
+  titles, `EXAMPLE:` titles and maps whose provenance record has no build.
 - **N1 Examples give structure, never design.** Copy the build pipeline, the design-note sections and the check
   conventions of an example. Never copy its objective, layout, start setup, enemy, story, rewards, decoration or
   its `QUALITY_BAND_OK:` line (the examples are small on purpose; a real mission reaches the band in

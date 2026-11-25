@@ -31,7 +31,7 @@ SIDE_OBJECTIVE: Infest the wrecked outpost's Command Center :: capture :: base
 MISSION_TYPE: rescue :: none :: 1
 
 ## Target duration
-TARGET_DURATION: 25 :: Easy 20 / Hard 30 :: Nest must not fall=25; captive Queen holding pens=10; Queen back to the Home Nest=7; infest wrecked outpost=3
+TARGET_DURATION: 25 :: Easy 20 / Hard 30 :: Nest must not fall=25; captive Queen holding pens=6; Queen back to the Home Nest=6; infest wrecked outpost=3
 
 ## Start setup
 START_SETUP: small-base :: the brood's young hive: Hatchery, Spawning Pool, Evolution Chamber, six Drones, six Zerglings; everything else is grown in the mission
